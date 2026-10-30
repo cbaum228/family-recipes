@@ -1,4 +1,4 @@
-/* Family Recipes: no backend, accounts, external scripts, or data uploads. */
+/* Family Recipes: browser-local cache plus optional authenticated Google Drive sync. */
 (() => {
 "use strict";
 const KEY="family-recipes-household-v2";
@@ -25,11 +25,14 @@ function safeState(obj){
   if(!obj||!Array.isArray(obj.lots)||!Array.isArray(obj.plan)||!Array.isArray(obj.cooked))return null;
   const lots=obj.lots.slice(0,3000).filter(x=>x&&typeof x.key==="string"&&x.key.length<180&&["g","ml"].includes(x.unit)&&Number.isFinite(Number(x.qty))&&Number(x.qty)>=0&&Number(x.qty)<1e8).map(x=>({id:String(x.id||ID()),key:x.key,name:String(x.name||x.key).slice(0,160),unit:x.unit,qty:Number(x.qty),expires:/^\d{4}-\d{2}-\d{2}$/.test(x.expires||"")?x.expires:"",aisle:String(x.aisle||"Other").slice(0,70)}));
   const plan=obj.plan.slice(0,500).filter(x=>x&&typeof x.recipeId==="string"&&validServings(x.servings??(x.meals!=null?Number(x.meals)*2.1:NaN))!==null).map(x=>({id:String(x.id||ID()),recipeId:x.recipeId,servings:validServings(x.servings??(x.meals!=null?Number(x.meals)*2.1:NaN)),day:String(x.day||"").slice(0,30)}));
-  const cooked=obj.cooked.slice(-300).filter(x=>x&&typeof x.recipeId==="string").map(x=>({recipeId:x.recipeId,date:String(x.date||"").slice(0,10),category:String(x.category||"").slice(0,60),servings:Number(x.servings)||null,finishedWeight:Number(x.finishedWeight)||null,used:Array.isArray(x.used)?x.used:[]}));
+  const cooked=obj.cooked.slice(-300).filter(x=>x&&typeof x.recipeId==="string").map((x,n)=>({id:String(x.id||"legacy-"+n+"-"+x.recipeId+"-"+x.date),recipeId:x.recipeId,date:String(x.date||"").slice(0,10),category:String(x.category||"").slice(0,60),servings:Number(x.servings)||null,finishedWeight:Number(x.finishedWeight)||null,used:Array.isArray(x.used)?x.used:[]}));
   return {version:3,lots,plan,cooked,shopping:Array.isArray(obj.shopping)?obj.shopping.filter(i=>i&&i.key&&Number(i.qty)>0).slice(0,300):[]};
 }
 try{const p=localStorage.getItem(KEY);if(p)state=safeState(JSON.parse(p))||empty()}catch(_){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch(_){return false}}
+function save(silent=false){
+ try{localStorage.setItem(KEY,JSON.stringify(state));if(!silent)window.dispatchEvent(new Event("family-recipes:changed"));return true}
+ catch(_){return false}
+}
 function amountRequired(r,m){return(r.ingredients||[]).map(i=>({...i,need:Number(i.amount)*m/Number(r.servings||1)})).filter(i=>Number.isFinite(i.need)&&i.need>0)}
 function ikey(i){return String(i.shopping_key||i.name).trim().toLowerCase()+"|"+String(i.unit||"g")}
 function available(i){const k=ikey(i);return state.lots.reduce((s,l)=>s+(l.key===k?l.qty:0),0)}
@@ -219,7 +222,7 @@ function cookFirst(){const p=state.plan[0];if(!p){message("planner-status","No p
         }
       }
       state.lots=state.lots.filter(l=>l.qty>.001);
-      state.cooked.push({recipeId:r.id,date:new Date().toISOString().slice(0,10),category:r.category,servings:p.servings,finishedWeight,used});
+      state.cooked.push({id:ID(),recipeId:r.id,date:new Date().toISOString().slice(0,10),category:r.category,servings:p.servings,finishedWeight,used});
       state.plan=state.plan.filter(x=>x.id!==p.id);save();host.hidden=true;clear(host);
       renderPlan();renderShopping();renderHistory();renderPantry();renderSuggestions();message("planner-status","Recipe cooked. Actual ingredients deducted.");
     });
@@ -274,5 +277,17 @@ async function start(){
  }catch(_){message("pantry-status","Could not load recipe catalog; enable GitHub Pages and reload.");message("planner-status","Could not load recipe catalog.");}
  wire()
 }
+// Private household cache bridge. No Google credentials or access tokens exposed.
+window.FamilyRecipesHousehold={
+ snapshot:()=>JSON.parse(JSON.stringify(state)),
+ normalize:value=>safeState(value),
+ replace:remote=>{
+   const next=safeState(remote);
+   if(!next)throw Error("Invalid pantry data");
+   state=next;
+   if(!save(true))throw Error("Cannot persist local pantry cache");
+   renderPantry();renderPlan();renderShopping();renderSuggestions();renderHistory();
+ }
+};
 start();
 })();
