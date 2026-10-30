@@ -1,0 +1,18 @@
+---
+layout: null
+permalink: /assets/recipes.json
+---
+[
+{% assign ready = site.recipes | where_exp: "r", "r.status == 'ready-to-test' or r.status == 'tested'" | sort: "title" %}
+{% for r in ready %}{% unless forloop.first %},{% endunless %}{
+"id": {{ r.slug | jsonify }},
+"name": {{ r.title | jsonify }},
+"url": {{ r.url | relative_url | jsonify }},
+"category": {{ r.category | jsonify }},
+"cuisine": {{ r.cuisine | jsonify }},
+"tags": {{ r.tags | jsonify }},
+"family_meals": {{ r.family_meals | plus: 0 }},
+"nutrition_verified": {{ r.nutrition_verified | default: false | jsonify }},
+"ingredients": {{ r.ingredients | jsonify }}
+}{% endfor %}
+]

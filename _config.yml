@@ -1,0 +1,21 @@
+title: Family Recipes
+description: A Markdown-first, pantry-aware family cookbook.
+url: "https://cbaum228.github.io"
+baseurl: "/family-recipes"
+markdown: kramdown
+permalink: pretty
+collections:
+  recipes:
+    output: true
+    permalink: /recipes/:name/
+defaults:
+  - scope:
+      path: ""
+      type: recipes
+    values:
+      layout: recipe
+exclude:
+  - README.md
+  - CONTRIBUTING.md
+  - .github
+  - .gitignore

@@ -1,0 +1,16 @@
+---
+layout: default
+title: Meal Planner
+permalink: /planner/
+---
+<section class="hero narrow"><p class="eyebrow">PLAN, THEN SHOP</p><h1>Meal <em>planner.</em></h1><p>Scale family batches, consolidate ingredients, subtract your pantry and export a shopping list.</p></section>
+<section class="panel"><h2>Add a recipe</h2>
+<div class="form-grid"><label>Recipe <select id="plan-recipe"><option>Loading…</option></select></label>
+<label>Family meals <input id="plan-meals" type="number" step=".5" min=".5" max="50" value="5"></label>
+<label>Prep day <select id="plan-day"><option value="">Any day</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></label>
+<button id="plan-add">Add to plan</button></div>
+<div id="planned-list"></div><p id="planner-status" class="muted" role="status"></p>
+</section>
+<section class="panel"><h2>Consolidated shopping list</h2><p class="muted">Available pantry quantities are automatically subtracted. Quantities refer to edible ingredient weights and may not match store package sizes.</p><div id="shopping-list"></div>
+<div class="actions"><button id="copy-shopping">Copy shopping list</button><button id="download-shopping">Download CSV</button><button id="cook-first">Mark first planned recipe cooked</button></div>
+<p class="muted">Marking a recipe cooked asks before deducting its ingredient quantities. You can also update individual pantry lots manually.</p></section>

@@ -1,0 +1,15 @@
+---
+layout: default
+title: Browse Recipes
+---
+<section class="hero"><p class="eyebrow">THE GROWING COOKBOOK</p><h1>Good food, <em>worth repeating.</em></h1>
+<p>Recipes that don't disappear into old chats. Plan family-sized batches, track ingredients, and find what you can cook with what's on hand.</p>
+<div class="actions"><a class="action" href="{{ '/pantry/' | relative_url }}">What's in my pantry?</a><a class="action secondary" href="{{ '/planner/' | relative_url }}">Plan meals</a></div></section>
+<section class="panel"><h2>Find a recipe</h2><label for="recipe-search">Search by name, cuisine or ingredient</label><input type="search" id="recipe-search" placeholder="Try potatoes, chili or Indian…"><div id="recipe-cards" class="cards">
+{% assign sorted = site.recipes | sort: 'title' %}
+{% for r in sorted %}<article class="recipe-card" data-search="{{ r.title | downcase | escape }} {{ r.category | downcase | escape }} {{ r.cuisine | downcase | escape }} {{ r.tags | join: ' ' | downcase | escape }} {{ r.produce | join: ' ' | downcase | escape }}">
+<div class="eyebrow">{{ r.category | escape }} · {{ r.status | replace: '-', ' ' | escape }}</div>
+<h3><a href="{{ r.url | relative_url }}">{{ r.title | escape }}</a></h3><p>{{ r.description | escape }}</p>
+<div class="tags">{% for tag in r.tags limit:4 %}<span>{{ tag | escape }}</span>{% endfor %}</div></article>{% endfor %}
+</div><p id="no-matches" class="muted" hidden>No matches. Try another ingredient.</p></section>
+<section class="panel"><h2>How the cookbook works</h2><p>Each recipe is stored in a public Markdown file. Your pantry and meal plans are private to your browser and can be exported as a backup. No account required.</p></section>

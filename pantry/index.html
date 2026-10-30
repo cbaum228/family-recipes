@@ -1,0 +1,21 @@
+---
+layout: default
+title: My Pantry
+permalink: /pantry/
+---
+<section class="hero narrow"><p class="eyebrow">LOCAL TO YOUR DEVICE</p><h1>My <em>pantry.</em></h1><p>Track quantities and use-by dates. See what you can cook before your vegetables spoil.</p></section>
+<aside class="notice">Your household inventory is stored only in this browser. It is <strong>not</strong> uploaded to the public GitHub repository. Back up your data using the download control; devices do not automatically sync.</aside>
+<section class="panel"><h2>Add ingredients</h2>
+<div class="form-grid">
+<label>Ingredient <select id="pantry-food"><option>Loading…</option></select></label>
+<label>Amount <input id="pantry-amount" type="number" value="500" min=".1" step="any"></label>
+<label>Unit <select id="pantry-unit"><option value="g">g</option><option value="ml">ml</option></select></label>
+<label>Use by (optional) <input id="pantry-expires" type="date"></label>
+<button id="pantry-add">Add to pantry</button>
+</div><p id="pantry-status" class="muted" role="status"></p>
+<h3>Current inventory</h3><div id="pantry-list"></div>
+<div class="actions"><button id="export-backup">Download private backup</button><label class="button-file">Import private backup<input type="file" id="import-backup" accept=".json,application/json" hidden></label></div></section>
+<section class="panel"><h2>What could we cook?</h2>
+<p class="muted">Ranked primarily by available ingredient quantities. Soon-to-expire ingredients are prioritized and recently cooked cuisines receive a small variety adjustment. Nutrition is not scored until recipes have verified macros.</p>
+<label>Family meals per recipe <input id="suggest-meals" type="number" min=".5" max="50" step=".5" value="5"></label>
+<div id="suggestions" class="cards"></div></section>
