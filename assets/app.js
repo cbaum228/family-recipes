@@ -7,14 +7,14 @@ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefine
 const fmt=(n,u)=>new Intl.NumberFormat("en-US",{maximumFractionDigits:n<10?1:0}).format(Math.max(0,n))+" "+u;
 const ID=()=>typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2);
 const validServings=n=>{const v=Number(n);return Number.isFinite(v)&&v>=.5&&v<=50?Math.round(v*2)/2:null};
-const empty=()=>({version:2,lots:[],plan:[],cooked:[]});
+const empty=()=>({version:3,lots:[],plan:[],cooked:[],shopping:[]});
 let state=empty(),recipes=[],recipeById=new Map(),foods=new Map();
 function safeState(obj){
   if(!obj||!Array.isArray(obj.lots)||!Array.isArray(obj.plan)||!Array.isArray(obj.cooked))return null;
   const lots=obj.lots.slice(0,3000).filter(x=>x&&typeof x.key==="string"&&x.key.length<180&&["g","ml"].includes(x.unit)&&Number.isFinite(Number(x.qty))&&Number(x.qty)>=0&&Number(x.qty)<1e8).map(x=>({id:String(x.id||ID()),key:x.key,name:String(x.name||x.key).slice(0,160),unit:x.unit,qty:Number(x.qty),expires:/^\d{4}-\d{2}-\d{2}$/.test(x.expires||"")?x.expires:"",aisle:String(x.aisle||"Other").slice(0,70)}));
   const plan=obj.plan.slice(0,500).filter(x=>x&&typeof x.recipeId==="string"&&validServings(x.servings??(x.meals!=null?Number(x.meals)*2.1:NaN))!==null).map(x=>({id:String(x.id||ID()),recipeId:x.recipeId,servings:validServings(x.servings??(x.meals!=null?Number(x.meals)*2.1:NaN)),day:String(x.day||"").slice(0,30)}));
   const cooked=obj.cooked.slice(-300).filter(x=>x&&typeof x.recipeId==="string").map(x=>({recipeId:x.recipeId,date:String(x.date||"").slice(0,10),category:String(x.category||"").slice(0,60)}));
-  return {version:2,lots,plan,cooked};
+  return {version:3,lots,plan,cooked,shopping:Array.isArray(obj.shopping)?obj.shopping.filter(i=>i&&i.key&&Number(i.qty)>0).slice(0,300):[]};
 }
 try{const p=localStorage.getItem(KEY);if(p)state=safeState(JSON.parse(p))||empty()}catch(_){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch(_){return false}}
@@ -116,16 +116,47 @@ function renderPlan(){
  controls.append(n,rm);line.append(content,controls);target.append(line)
  }
 }
-function renderShopping(){
- const target=$("shopping-list");if(!target)return;clear(target);
- const ingredients=mergedPlan();if(!ingredients.length){target.append(el("p","Choose at least one recipe to build a shopping list.","muted"));return}
- for(const i of ingredients){
- const buy=Math.max(0,i.needed-available(i)),line=el("div",null,"inventory-row"),detail=el("div");
- detail.append(el("strong",i.name),el("div","Recipe total: "+fmt(i.needed,i.unit)+" · On hand: "+fmt(available(i),i.unit),"muted"));
- line.append(detail,el("strong",buy>.01?fmt(buy,i.unit)+" to buy":"Already stocked",buy>.01?"":"ready"));target.append(line)
+function missingPlanRows(){return mergedPlan().map(i=>({...i,onHand:available(i),buy:Math.max(0,i.needed-available(i))})).filter(i=>i.buy>.01)}
+ function shoppingRows(){return state.shopping.length?state.shopping.filter(i=>!i.checked).map(i=>({name:i.name,unit:i.unit,aisle:i.aisle,needed:i.qty,onHand:0,buy:i.qty})):missingPlanRows()}
+ function newTrip(){
+  const deficit=missingPlanRows();if(!deficit.length){message("shopping-status","No missing groceries in the meal plan.");return}
+  if(state.shopping.length&&!confirm("Replace your current shopping trip? Bought items already in the pantry will be retained."))return;
+  state.shopping=deficit.map(i=>({id:ID(),key:i.key,name:i.name,unit:i.unit,aisle:i.aisle,qty:Math.ceil(i.buy),checked:false,expires:"",lotId:"",bought:0}));
+  save();renderShopping();message("shopping-status","Shopping trip created.");
  }
-}
-function shoppingRows(){return mergedPlan().map(i=>({...i,onHand:available(i),buy:Math.max(0,i.needed-available(i))})).filter(i=>i.buy>.01)}
+ function checkPurchase(i){
+  if(i.checked)return;const qty=Number(i.qty);if(!Number.isFinite(qty)||qty<=0){renderShopping();return}
+  const id=ID();state.lots.push({id,key:i.key,name:i.name,unit:i.unit,qty,expires:i.expires||"",aisle:i.aisle});
+  i.lotId=id;i.bought=qty;i.checked=true;save();renderShopping();renderPantry();renderSuggestions();message("shopping-status","Added "+i.name+" to pantry.");
+ }
+ function uncheckPurchase(i){
+  const lot=state.lots.find(l=>l.id===i.lotId);
+  if(!lot||Math.abs(lot.qty-i.bought)>.001){message("shopping-status","This lot was already used or adjusted. Edit the pantry instead.");renderShopping();return}
+  if(!confirm("Undo this purchase and remove its pantry lot?")){renderShopping();return}
+  state.lots=state.lots.filter(l=>l.id!==i.lotId);i.checked=false;i.lotId="";i.bought=0;
+  save();renderShopping();renderPantry();renderSuggestions();message("shopping-status","Purchase undone.");
+ }
+ function renderShopping(){
+  const holder=$("shopping-list");if(!holder)return;clear(holder);
+  if(!state.shopping.length){holder.append(el("p",missingPlanRows().length+" missing groceries. Build a shopping trip to make a checklist.","muted"));return}
+  holder.append(el("p",state.shopping.filter(i=>i.checked).length+" / "+state.shopping.length+" items purchased.","muted"));
+  for(const i of [...state.shopping].sort((a,b)=>Number(a.checked)-Number(b.checked)||a.aisle.localeCompare(b.aisle)||a.name.localeCompare(b.name))){
+   const row=el("div",null,"inventory-row"),lab=el("label",null,"shopping-check"),cb=el("input");
+   cb.type="checkbox";cb.checked=!!i.checked;cb.setAttribute("aria-label","Purchased "+i.name);
+   cb.addEventListener("change",()=>cb.checked?checkPurchase(i):uncheckPurchase(i));
+   lab.append(cb,el("strong",i.name));row.append(lab);
+   if(i.checked){row.append(el("span","Added "+fmt(i.bought,i.unit)+" to pantry","ready"))}
+   else{
+    const controls=el("div",null,"row-actions"),qty=el("input"),date=el("input");
+    qty.type="number";qty.step="any";qty.min=".1";qty.value=i.qty;qty.setAttribute("aria-label","Purchased quantity of "+i.name);
+    qty.addEventListener("change",()=>{let v=Number(qty.value);if(Number.isFinite(v)&&v>0){i.qty=v;save()}else qty.value=i.qty});
+    date.type="date";date.value=i.expires||"";date.setAttribute("aria-label","Use-by date of "+i.name);
+    date.addEventListener("change",()=>{i.expires=date.value;save()});
+    controls.append(qty,el("span",i.unit,"muted"),date);row.append(controls);
+   }
+   holder.append(row);
+  }
+ }
 function textShopping(){const rows=shoppingRows();return rows.length?"Shopping list\n"+rows.map(i=>"☐ "+i.name+": "+fmt(i.buy,i.unit)).join("\n"):"Nothing to buy for the selected recipes."}
 // AnyList bulk paste expects one item per line, with no headings or checkbox glyphs.
 // Put units first for ingredient-style parsing. AnyList quantity-field recognition still needs live verification.
@@ -171,7 +202,7 @@ function wire(){
   $("copy-shopping").addEventListener("click",async()=>{try{await copy(textShopping());message("planner-status","Shopping list copied.")}catch(_){message("planner-status","Clipboard unavailable. Download CSV instead.")}});
   $("copy-anylist").addEventListener("click",async()=>{const items=shoppingRows();if(!items.length){message("planner-status","No groceries to transfer: add recipes first or check the pantry quantities.");return}try{await copy(anylistShopping());message("planner-status",items.length+" grocery items copied. Open your shared AnyList list, tap Add Item, then paste the items. Check the quantities before shopping.")}catch(_){message("planner-status","Clipboard unavailable on this device; use the CSV export instead.")}});
   $("download-shopping").addEventListener("click",()=>download("family-recipes-shopping.csv","\ufeff"+csvShopping(),"text/csv;charset=utf-8"));
-  $("cook-first").addEventListener("click",cookFirst);renderPlan();renderShopping()
+  $("new-trip").addEventListener("click",newTrip);$("cook-first").addEventListener("click",cookFirst);renderPlan();renderShopping()
  }
 }
 async function start(){
