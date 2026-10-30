@@ -8,10 +8,11 @@
 <body>
 <header class="masthead"><div class="wrap masthead-inner">
 <a class="brand" href="{{ '/' | relative_url }}">◈ Family Recipes</a>
-<nav><a href="{{ '/' | relative_url }}">Recipes</a><a href="{{ '/pantry/' | relative_url }}">My pantry</a><a href="{{ '/planner/' | relative_url }}">Meal planner</a></nav>
-</div></header>
+<nav><a href="{{ '/' | relative_url }}">Recipes</a><a href="{{ '/pantry/' | relative_url }}">My pantry</a><a href="{{ '/planner/' | relative_url }}">Meal planner</a><a href="{{ '/sync/' | relative_url }}">Drive sync</a></nav>
+<span class="drive-inline"><span id="drive-inline-status" aria-live="polite">Local only</span> <button class="light" id="drive-inline-connect" type="button">Sign in to Drive</button></span></div></header>
 <main class="wrap">{{ content }}</main>
-<footer class="wrap footer">Markdown recipes are public. Pantry and plans are saved in this browser only, never published to GitHub. · <a href="https://github.com/cbaum228/family-recipes">Source on GitHub</a></footer>
+<footer class="wrap footer">Markdown recipes are public. Household data stays private in this browser and, when connected, in your restricted Google Drive file. · <a href="https://github.com/cbaum228/family-recipes">Source on GitHub</a></footer>
 <script>window.CB_CATALOG={{ '/assets/recipes.json' | relative_url | jsonify }};</script>
 <script src="{{ '/assets/app.js' | relative_url }}" defer></script>
+<script src="{{ '/assets/drive-sync.js' | relative_url }}" defer></script>
 </body></html>

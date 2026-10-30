@@ -31,7 +31,7 @@ The cookbook is designed to be forked. Fork the repository, update `url` and `ba
 
 ## Future shared pantry synchronization
 
-See [Google Drive sync design](docs/google-drive-sync.md). The current site does **not** sync across devices. A Google Drive file shared privately with specified Google accounts can be an opt-in storage backend for household pantry, plans and cooking history, without making those records public. It requires Google OAuth configuration, explicit user sign-in and concurrent-edit handling; do not place Google account credentials or bearer tokens in the public repository.
+See [Google Drive sync design](docs/google-drive-sync.md). The site now has an opt-in Drive sync adapter; cloud syncing activates only after Google Cloud OAuth/Picker configuration, authorization and a selected household file. A Google Drive file shared privately with specified Google accounts can be an opt-in storage backend for household pantry, plans and cooking history, without making those records public. It requires Google OAuth configuration, explicit user sign-in and concurrent-edit handling; do not place Google account credentials or bearer tokens in the public repository.
 
 ## Shopping with AnyList
 
@@ -48,3 +48,9 @@ AnyList instructions: https://help.anylist.com/articles/paste-items/
 5. To shop from another device using the same shared household inventory, the planned private Google Drive sync must be configured and implemented first. Until then, shopping and cooking state are local to the current browser only.
 
 Limitations: manually adding arbitrary groceries not already in a planned recipe, undoing partially consumed purchases, recipe substitutions absent from the ingredient catalog, and Google Drive cross-device sync need additional work. Pantry shortages on cooking are confirmed and recorded without allowing negative inventory.
+
+## Set up private Google Drive sync
+
+Visit the **Drive sync** page on the deployed website, or read [Google Drive setup](docs/google-drive-sync.md). Configure OAuth and Google Picker in your own Google Cloud project, save the public Web OAuth Client ID, referrer-restricted Picker API key and project number on each device, authorize `drive.file`, create a private JSON pantry file, and share it with your other household account as Editor. Then use Google Picker on the second device to grant this application permission to the shared file. Do **not** commit private JSON exports, OAuth client secrets or tokens.
+
+While connected, changes sync after a short delay and the app pulls roughly every 45 seconds while open. Page reloads can require signing in again because tokens are kept in memory. Drive's single-file updates cannot guarantee database-grade atomic writes; overlapping simultaneous edits are flagged when detectable, but a narrow race remains. Keep local backup exports and test two-device behavior before relying on this for real-time shared shopping.

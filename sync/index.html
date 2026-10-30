@@ -1,0 +1,50 @@
+---
+layout: default
+title: Private Google Drive Sync
+permalink: /sync/
+---
+<section class="hero narrow"><p class="eyebrow">OPTIONAL PRIVATE SYNC</p>
+<h1>Shared household <em>pantry.</em></h1>
+<p>Keep public recipes on GitHub and privately share your shopping list, pantry and cooking records through one restricted Google Drive JSON file.</p></section>
+<aside class="notice"><strong>Initial setup is required.</strong> This site does not have permission to your Google Drive until you configure your own Google Cloud project and explicitly sign in. Local data works without Google Drive. Google tokens are held only in the current page's memory, never committed to GitHub.</aside>
+<section class="panel">
+<h2>1. Google Cloud setup</h2>
+<p>Do this once for the cookbook's public website. You control the project and which Google accounts may connect.</p>
+<ol>
+<li>Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>, create/select a project and copy its <strong>numeric Project number</strong>.</li>
+<li>Enable <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener">Google Drive API</a> and <a href="https://console.cloud.google.com/apis/library/picker.googleapis.com" target="_blank" rel="noopener">Google Picker API</a>.</li>
+<li>Under <strong>Google Auth Platform</strong>, configure the OAuth consent screen. Choose <strong>External</strong> if appropriate; while in Testing, add both adults as test users. Request the <code>https://www.googleapis.com/auth/drive.file</code> scope.</li>
+<li>Create an <strong>OAuth Client ID → Web application</strong>. Add <code>https://cbaum228.github.io</code> as an <strong>Authorized JavaScript origin</strong> (no path). Copy the Client ID. Do not use or share a Client Secret.</li>
+<li>Create an <strong>API key</strong> for Picker. Restrict it to Google Picker API and Drive API; restrict HTTP referrers to <code>https://cbaum228.github.io/*</code> and <code>https://docs.google.com/*</code>, as required for the Google-hosted Picker frame.</li>
+</ol>
+<p class="muted">Your OAuth Client ID, Picker API key and project number identify your application. They are not credentials granting access to private files; each adult still explicitly authorizes Google access and the individual file.</p>
+</section>
+<section class="panel">
+<h2>2. Save browser configuration</h2>
+<div class="form-grid">
+<label>OAuth Web Client ID <input id="drive-client-id" placeholder="...apps.googleusercontent.com" autocomplete="off"></label>
+<label>Picker API key <input id="drive-api-key" placeholder="AIza..." autocomplete="off"></label>
+<label>Numeric Cloud project number <input id="drive-project-number" placeholder="123456789012" autocomplete="off"></label>
+<button id="drive-save-settings" type="button">Save configuration</button>
+</div>
+<p class="muted">Configuration is saved only in this browser. On your spouse's device, use these same public application settings. No passwords, client secrets or account tokens should be pasted into these fields.</p>
+</section>
+<section class="panel">
+<h2>3. Connect the household file</h2>
+<p id="drive-status" aria-live="polite">Local-only mode</p>
+<div class="actions"><button id="drive-login" type="button">Sign in with Google</button>
+<button id="drive-create" type="button">Create new private pantry file</button>
+<button id="drive-picker" type="button">Choose existing / shared file</button>
+<button id="drive-sync-now" type="button">Sync now</button>
+<button class="light" id="drive-disconnect" type="button">Disconnect on this page</button></div>
+<p id="drive-file-id" class="muted"></p>
+<p><a id="drive-file-link" href="#" target="_blank" rel="noopener" hidden>Open household JSON file in Google Drive</a></p>
+<p><strong>First device:</strong> Sign in, select <em>Create new private pantry file</em>, open its Drive link and share it with your spouse using <strong>Restricted → Editor</strong>. Keep it restricted to your intended Google accounts.</p>
+<p><strong>Second device:</strong> Sign in using the other authorized Google account, choose <em>Choose existing / shared file</em>, find <code>family-recipes-household.json</code> in the shared Drive view, and select it. Both devices then use the same restricted file.</p>
+</section>
+<section class="panel">
+<h2>What happens after connecting?</h2>
+<p>The cookbook checks Drive when a connected page is opened or refocused and approximately every 45 seconds while open. Local edits are saved immediately to the browser and synchronized after a short delay. If offline or authorization expires, local edits remain on the device until you reconnect.</p>
+<p><strong>Important limitations:</strong> Browser OAuth access tokens expire and cannot be silently refreshed without user interaction. After navigating to a new cookbook page you may need to use <em>Sign in to Drive</em> again. Simultaneous edits to the very same ingredient are flagged by the three-way merge, but Google Drive's whole-file update does not provide full database-style transactions. Avoid simultaneous edits to the same shopping item until we have tested this across both devices.</p>
+<p>Backing up locally before first connection is recommended. The site asks before replacing a nonempty local pantry with the selected shared file and downloads a JSON copy.</p>
+</section>

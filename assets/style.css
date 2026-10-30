@@ -23,3 +23,6 @@ input,select{font:inherit;max-width:100%;padding:10px;border:1px solid #bdcbbd;b
 .ingredient-measure .scaled-amount{white-space:nowrap}
 .ingredient-measure .us-equivalent{font-size:.88em;color:var(--muted);white-space:nowrap;font-weight:400}
 @media(max-width:650px){.ingredient-measure{flex-direction:column;align-items:flex-end;gap:0}}
+
+/* Optional Google Drive connection */
+.drive-inline{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap}.drive-inline button{font-size:12px;padding:5px 8px}.masthead-inner{flex-wrap:wrap}#drive-status{font-weight:600}#drive-file-id{overflow-wrap:anywhere}#drive-client-id,#drive-api-key{width:100%}#drive-project-number{width:100%}
