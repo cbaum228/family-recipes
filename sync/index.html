@@ -1,50 +1,67 @@
 ---
 layout: default
-title: Private Google Drive Sync
+title: Private Household Sync
 permalink: /sync/
 ---
-<section class="hero narrow"><p class="eyebrow">OPTIONAL PRIVATE SYNC</p>
-<h1>Shared household <em>pantry.</em></h1>
-<p>Keep public recipes on GitHub and privately share your shopping list, pantry and cooking records through one restricted Google Drive JSON file.</p></section>
-<aside class="notice"><strong>Initial setup is required.</strong> This site does not have permission to your Google Drive until you configure your own Google Cloud project and explicitly sign in. Local data works without Google Drive. Google tokens are held only in the current page's memory, never committed to GitHub.</aside>
+<section class="hero narrow">
+<p class="eyebrow">FREE FIREBASE SPARK · PRIVATE HOUSEHOLD DATA</p>
+<h1>Shared household <em>sync.</em></h1>
+<p>Keep your recipes public, while the pantry, shopping trips, planned meals and cooking records synchronize privately between your devices.</p>
+</section>
+<aside class="notice"><strong>Setup required:</strong> Create a free Firebase Spark project and publish the included restrictive Firestore rules first. Until then, the cookbook stays fully usable with its local browser storage. Do not choose an open or test-mode database.</aside>
 <section class="panel">
-<h2>1. Google Cloud setup</h2>
-<p>Do this once for the cookbook's public website. You control the project and which Google accounts may connect.</p>
+<h2>1. Create Firebase Spark project</h2>
 <ol>
-<li>Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>, create/select a project and copy its <strong>numeric Project number</strong>.</li>
-<li>Enable <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener">Google Drive API</a> and <a href="https://console.cloud.google.com/apis/library/picker.googleapis.com" target="_blank" rel="noopener">Google Picker API</a>.</li>
-<li>Under <strong>Google Auth Platform</strong>, configure the OAuth consent screen. Choose <strong>External</strong> if appropriate; while in Testing, add both adults as test users. Request the <code>https://www.googleapis.com/auth/drive.file</code> scope.</li>
-<li>Create an <strong>OAuth Client ID → Web application</strong>. Add <code>https://cbaum228.github.io</code> as an <strong>Authorized JavaScript origin</strong> (no path). Copy the Client ID. Do not use or share a Client Secret.</li>
-<li>Create an <strong>API key</strong> for Picker. Restrict it to Google Picker API and Drive API; restrict HTTP referrers to <code>https://cbaum228.github.io/*</code> and <code>https://docs.google.com/*</code>, as required for the Google-hosted Picker frame.</li>
+<li>Open <a href="https://console.firebase.google.com/" rel="noopener" target="_blank">Firebase Console</a>, create a project, and leave the billing plan on <strong>Spark (no cost)</strong>. Google Analytics is optional.</li>
+<li>Under <strong>Build → Authentication → Sign-in method</strong>, enable <strong>Google</strong> as a provider.</li>
+<li>Under <strong>Authentication → Settings → Authorized domains</strong>, add <code>cbaum228.github.io</code> (the hostname only, without https or path).</li>
+<li>Under <strong>Build → Firestore Database</strong>, create the default database on the free tier, in <strong>production mode</strong>. A nearby US region is reasonable.</li>
+<li>In Firestore → Rules, copy the contents of <a href="https://github.com/cbaum228/family-recipes/blob/main/firebase/firestore.rules" target="_blank" rel="noopener">firebase/firestore.rules</a> and <strong>Publish</strong>. Those rules restrict reads and writes to authorized household members.</li>
+<li>Under <strong>Project settings → Your apps</strong>, register a <strong>Web app</strong> (the &lt;/&gt; icon) and copy its <strong>Firebase config</strong>. You need its apiKey, authDomain, projectId and appId. These are public application identifiers, <em>not</em> Google passwords or service-account keys.</li>
 </ol>
-<p class="muted">Your OAuth Client ID, Picker API key and project number identify your application. They are not credentials granting access to private files; each adult still explicitly authorizes Google access and the individual file.</p>
+<p class="muted">Full instructions: <a href="https://github.com/cbaum228/family-recipes/blob/main/docs/firebase-spark-setup.md">Firebase Spark setup guide</a>.</p>
 </section>
 <section class="panel">
-<h2>2. Save browser configuration</h2>
+<h2>2. Connect your cookbook</h2>
+<p>Copy these four values from your registered Firebase Web app. They are stored in this device's browser only.</p>
 <div class="form-grid">
-<label>OAuth Web Client ID <input id="drive-client-id" placeholder="...apps.googleusercontent.com" autocomplete="off"></label>
-<label>Picker API key <input id="drive-api-key" placeholder="AIza..." autocomplete="off"></label>
-<label>Numeric Cloud project number <input id="drive-project-number" placeholder="123456789012" autocomplete="off"></label>
-<button id="drive-save-settings" type="button">Save configuration</button>
+<label>Firebase API key <input id="fb-api-key" autocomplete="off" placeholder="AIza…"></label>
+<label>Authentication domain <input id="fb-auth-domain" autocomplete="off" placeholder="example.firebaseapp.com"></label>
+<label>Project ID <input id="fb-project-id" autocomplete="off" placeholder="family-recipes-1234"></label>
+<label>App ID <input id="fb-app-id" autocomplete="off" placeholder="1:123456:web:abcdef"></label>
+<button id="fb-save-config" type="button">Save Firebase configuration</button>
 </div>
-<p class="muted">Configuration is saved only in this browser. On your spouse's device, use these same public application settings. No passwords, client secrets or account tokens should be pasted into these fields.</p>
+<div class="actions">
+<button id="fb-sign-in" type="button">Sign in with Google</button>
+<button id="fb-sign-out" class="light" type="button">Sign out</button>
+</div>
+<p><strong>Signed in as:</strong> <span id="fb-user-name">Not signed in</span></p>
+<p><strong>Your Firebase UID:</strong> <code id="fb-user-uid">Not signed in</code>
+<button id="fb-copy-uid" type="button" class="light">Copy my UID</button></p>
 </section>
 <section class="panel">
-<h2>3. Connect the household file</h2>
-<p id="drive-status" aria-live="polite">Local-only mode</p>
-<div class="actions"><button id="drive-login" type="button">Sign in with Google</button>
-<button id="drive-create" type="button">Create new private pantry file</button>
-<button id="drive-picker" type="button">Choose existing / shared file</button>
-<button id="drive-sync-now" type="button">Sync now</button>
-<button class="light" id="drive-disconnect" type="button">Disconnect on this page</button></div>
-<p id="drive-file-id" class="muted"></p>
-<p><a id="drive-file-link" href="#" target="_blank" rel="noopener" hidden>Open household JSON file in Google Drive</a></p>
-<p><strong>First device:</strong> Sign in, select <em>Create new private pantry file</em>, open its Drive link and share it with your spouse using <strong>Restricted → Editor</strong>. Keep it restricted to your intended Google accounts.</p>
-<p><strong>Second device:</strong> Sign in using the other authorized Google account, choose <em>Choose existing / shared file</em>, find <code>family-recipes-household.json</code> in the shared Drive view, and select it. Both devices then use the same restricted file.</p>
+<h2>3. Create or join your private household</h2>
+<p>The first person creates the household. Your spouse signs into this same Firebase project, copies their UID, and sends it to you. You add that UID below; then they can open the same household ID on their device.</p>
+<div class="actions"><button id="fb-create" type="button">Create private household</button></div>
+<label>Household ID <input id="fb-household-id" placeholder="Paste or copy household ID" autocomplete="off"></label>
+<div class="actions">
+<button id="fb-connect" type="button">Connect to household</button>
+<button id="fb-copy-id" type="button" class="light">Copy household ID</button>
+</div>
+<p id="fb-current-household" class="muted">No household connected</p>
+<label>Authorize another user's Firebase UID (owner only)
+<input id="fb-member-uid" placeholder="Their UID from this page" autocomplete="off"></label>
+<div class="actions"><button id="fb-add-member" type="button">Authorize household member</button></div>
+<p id="fb-members" class="muted"></p>
 </section>
 <section class="panel">
-<h2>What happens after connecting?</h2>
-<p>The cookbook checks Drive when a connected page is opened or refocused and approximately every 45 seconds while open. Local edits are saved immediately to the browser and synchronized after a short delay. If offline or authorization expires, local edits remain on the device until you reconnect.</p>
-<p><strong>Important limitations:</strong> Browser OAuth access tokens expire and cannot be silently refreshed without user interaction. After navigating to a new cookbook page you may need to use <em>Sign in to Drive</em> again. Simultaneous edits to the very same ingredient are flagged by the three-way merge, but Google Drive's whole-file update does not provide full database-style transactions. Avoid simultaneous edits to the same shopping item until we have tested this across both devices.</p>
-<p>Backing up locally before first connection is recommended. The site asks before replacing a nonempty local pantry with the selected shared file and downloads a JSON copy.</p>
+<h2>4. Sync status and recovery</h2>
+<p id="fb-status" role="status" aria-live="polite">Local browser storage active.</p>
+<div class="actions">
+<button id="fb-sync-now" type="button">Sync now</button>
+<button id="fb-use-cloud" class="light" type="button">Use cloud copy (download local backup first)</button>
+</div>
+<p>Once connected, updates are saved in your browser and sent to Firestore automatically. Firestore pushes changes to open devices in real time. A cloud transaction can merge changes to <em>different</em> inventory or shopping records; conflicting edits to the <em>same</em> record pause synchronization for manual review.</p>
+<p class="muted">If there is an error, your browser retains its data. The optional cloud-copy action downloads a backup of local data before replacing it. Do not choose cloud copy unless you intend to discard local-only changes.</p>
+<p class="muted">Firebase rules—not an undisclosed API key—control pantry privacy. Friends can fork the public cookbook and use their own independent Firebase project and households.</p>
 </section>
