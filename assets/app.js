@@ -13,7 +13,7 @@ function safeState(obj){
   if(!obj||!Array.isArray(obj.lots)||!Array.isArray(obj.plan)||!Array.isArray(obj.cooked))return null;
   const lots=obj.lots.slice(0,3000).filter(x=>x&&typeof x.key==="string"&&x.key.length<180&&["g","ml"].includes(x.unit)&&Number.isFinite(Number(x.qty))&&Number(x.qty)>=0&&Number(x.qty)<1e8).map(x=>({id:String(x.id||ID()),key:x.key,name:String(x.name||x.key).slice(0,160),unit:x.unit,qty:Number(x.qty),expires:/^\d{4}-\d{2}-\d{2}$/.test(x.expires||"")?x.expires:"",aisle:String(x.aisle||"Other").slice(0,70)}));
   const plan=obj.plan.slice(0,500).filter(x=>x&&typeof x.recipeId==="string"&&validServings(x.servings??(x.meals!=null?Number(x.meals)*2.1:NaN))!==null).map(x=>({id:String(x.id||ID()),recipeId:x.recipeId,servings:validServings(x.servings??(x.meals!=null?Number(x.meals)*2.1:NaN)),day:String(x.day||"").slice(0,30)}));
-  const cooked=obj.cooked.slice(-300).filter(x=>x&&typeof x.recipeId==="string").map(x=>({recipeId:x.recipeId,date:String(x.date||"").slice(0,10),category:String(x.category||"").slice(0,60)}));
+  const cooked=obj.cooked.slice(-300).filter(x=>x&&typeof x.recipeId==="string").map(x=>({recipeId:x.recipeId,date:String(x.date||"").slice(0,10),category:String(x.category||"").slice(0,60),servings:Number(x.servings)||null,finishedWeight:Number(x.finishedWeight)||null,used:Array.isArray(x.used)?x.used:[]}));
   return {version:3,lots,plan,cooked,shopping:Array.isArray(obj.shopping)?obj.shopping.filter(i=>i&&i.key&&Number(i.qty)>0).slice(0,300):[]};
 }
 try{const p=localStorage.getItem(KEY);if(p)state=safeState(JSON.parse(p))||empty()}catch(_){}
@@ -112,8 +112,9 @@ function renderPlan(){
  content.append(a,el("div",p.servings+" family servings"+(p.day?" · "+p.day:""),"muted"));
  const controls=el("div",null,"row-actions"),n=el("input");n.type="number";n.min=".5";n.max="50";n.step=".5";n.value=p.servings;n.setAttribute("aria-label","Family servings of "+r.name);
  n.addEventListener("change",()=>{const v=validServings(n.value);if(v===null){n.value=p.servings;return}p.servings=v;save();renderPlan();renderShopping()});
+ const cook=el("button","Cook","light");cook.addEventListener("click",()=>editCooking(p.id));
  const rm=el("button","Remove","light");rm.addEventListener("click",()=>{state.plan=state.plan.filter(x=>x.id!==p.id);save();renderPlan();renderShopping()});
- controls.append(n,rm);line.append(content,controls);target.append(line)
+ controls.append(n,cook,rm);line.append(content,controls);target.append(line)
  }
 }
 function missingPlanRows(){return mergedPlan().map(i=>({...i,onHand:available(i),buy:Math.max(0,i.needed-available(i))})).filter(i=>i.buy>.01)}
@@ -163,17 +164,66 @@ function textShopping(){const rows=shoppingRows();return rows.length?"Shopping l
 function anylistShopping(){return shoppingRows().map(i=>`${Math.ceil(i.buy)} ${i.unit} ${i.name}`).join("\n")}
 const csvCell=s=>{let v=String(s);if(/^[=+@\\-]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
 function csvShopping(){return ["Department,Ingredient,Needed,On hand,To buy,Unit",...shoppingRows().map(i=>[i.aisle,i.name,i.needed.toFixed(1),i.onHand.toFixed(1),i.buy.toFixed(1),i.unit].map(csvCell).join(","))].join("\r\n")+"\r\n"}
-function cookFirst(){
- const p=state.plan[0];if(!p){message("planner-status","Add a recipe first.");return}
- const r=recipeById.get(p.recipeId);if(!r)return;
- if(!confirm("Mark "+r.name+" as cooked and subtract its available ingredients from this device's pantry? Check actual amounts used before confirming."))return;
- for(const i of amountRequired(r,p.servings)){
-   let left=i.need;const lots=state.lots.filter(l=>l.key===ikey(i)).sort((a,b)=>(a.expires||"9999").localeCompare(b.expires||"9999"));
-   for(const lot of lots){const used=Math.min(lot.qty,left);lot.qty-=used;left-=used;if(left<=0)break}
- }
- state.lots=state.lots.filter(l=>l.qty>.001);state.cooked.push({recipeId:r.id,category:r.category,date:new Date().toISOString().slice(0,10)});
- state.plan.shift();save();renderPlan();renderShopping();message("planner-status","Marked cooked. Pantry quantities subtracted where available; check any substitutions manually.");
-}
+function cookFirst(){const p=state.plan[0];if(!p){message("planner-status","No planned recipe.");return}editCooking(p.id)}
+  function editCooking(planId){
+    const p=state.plan.find(x=>x.id===planId),r=p&&recipeById.get(p.recipeId),host=$("cook-editor");
+    if(!r||!host)return;clear(host);host.hidden=false;
+    host.append(el("h2","Cook "+r.name),el("p","Adjust quantities to the actual ingredients used; set skipped ingredients to zero.","muted"));
+    const usedRows=[],items=el("div");
+    function addUsed(name,key,unit,value){
+      const row=el("div",null,"inventory-row"),input=el("input"),controls=el("div",null,"row-actions");
+      input.type="number";input.min="0";input.step="any";input.value=Number(value).toFixed(1);input.setAttribute("aria-label","Actual "+name);
+      controls.append(input,el("span",unit,"muted"));row.append(el("span",name),controls);items.append(row);
+      usedRows.push({name,key,unit,input});
+    }
+    for(const i of amountRequired(r,p.servings))addUsed(i.shopping_name||i.name,ikey(i),i.unit,i.need);
+    host.append(items);
+    const extras=el("div",null,"form-grid"),selection=el("select"),extraAmount=el("input"),extraButton=el("button","Add extra ingredient","light");
+    for(const food of [...foods.values()].sort((a,b)=>a.name.localeCompare(b.name)))option(selection,food.key,food.name+" ("+food.unit+")");
+    extraAmount.type="number";extraAmount.min="0";extraAmount.step="any";extraAmount.value="0";
+    extraButton.addEventListener("click",()=>{const f=foods.get(selection.value),n=Number(extraAmount.value);if(!f||!Number.isFinite(n)||n<=0)return;addUsed(f.name,f.key,f.unit,n);extraAmount.value="0"});
+    extras.append(selection,extraAmount,extraButton);host.append(el("p","Additional ingredient from the recipe catalog","muted"),extras);
+    const weight=el("input");weight.type="number";weight.min="0";weight.step="any";weight.placeholder="Finished cooked batch weight in grams (optional)";host.append(weight);
+    const note=el("p",null,"muted");note.id="cook-status";host.append(note);
+    const buttons=el("div",null,"actions"),done=el("button","Confirm cooking"),cancel=el("button","Cancel","light");
+    buttons.append(done,cancel);host.append(buttons);
+    cancel.addEventListener("click",()=>{host.hidden=true;clear(host)});
+    done.addEventListener("click",()=>{
+      const used=[];
+      for(const x of usedRows){
+        const q=Number(x.input.value);if(x.input.value.trim()===""||!Number.isFinite(q)||q<0||q>1e8){message("cook-status","Check actual amounts.");return}
+        if(q>0)used.push({name:x.name,key:x.key,unit:x.unit,qty:q})
+      }
+      const finishedWeight=weight.value.trim()===""?null:Number(weight.value);
+      if(finishedWeight!==null&&(!Number.isFinite(finishedWeight)||finishedWeight<=0)){message("cook-status","Check cooked batch weight.");return}
+      const totals=new Map();for(const i of used)totals.set(i.key,(totals.get(i.key)||0)+i.qty);
+      if([...totals].some(([key,amt])=>amt>state.lots.filter(l=>l.key===key).reduce((v,l)=>v+l.qty,0)+.001)
+       &&!confirm("Some used amounts exceed tracked pantry stock. Deduct available stock and record cooking anyway?"))return;
+      if(!confirm("Record cooking and deduct actual ingredient quantities?"))return;
+      for(const [key,qty] of totals){
+        let remaining=qty;
+        for(const lot of state.lots.filter(l=>l.key===key).sort((a,b)=>(a.expires||"9999").localeCompare(b.expires||"9999"))){
+          const take=Math.min(remaining,lot.qty);lot.qty-=take;remaining-=take;if(remaining<=0)break
+        }
+      }
+      state.lots=state.lots.filter(l=>l.qty>.001);
+      state.cooked.push({recipeId:r.id,date:new Date().toISOString().slice(0,10),category:r.category,servings:p.servings,finishedWeight,used});
+      state.plan=state.plan.filter(x=>x.id!==p.id);save();host.hidden=true;clear(host);
+      renderPlan();renderShopping();renderHistory();renderPantry();renderSuggestions();message("planner-status","Recipe cooked. Actual ingredients deducted.");
+    });
+    host.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  function renderHistory(){
+    const host=$("cooking-history");if(!host)return;clear(host);
+    const history=state.cooked.slice(-12).reverse();
+    if(!history.length){host.append(el("p","No cooking history yet.","muted"));return}
+    for(const c of history){
+      const row=el("details");row.append(el("summary",(recipeById.get(c.recipeId)?.name||c.recipeId)+" · "+c.date));
+      row.append(el("p",c.used?.length?c.used.map(i=>i.name+" "+fmt(i.qty,i.unit)).join("; "):"Earlier record with no actual ingredient details.","muted"));
+      if(c.finishedWeight)row.append(el("p","Final yield: "+fmt(c.finishedWeight,"g"),"muted"));
+      host.append(row);
+    }
+  }
 function initIndex(){const search=$("recipe-search"),cards=[...document.querySelectorAll(".recipe-card[data-search]")];if(!search)return;const filter=()=>{let shown=0;for(const c of cards){c.hidden=!c.dataset.search.includes(search.value.toLowerCase().trim());if(!c.hidden)shown++}const none=$("no-matches");if(none)none.hidden=shown!==0};search.addEventListener("input",filter)}
 function initRecipe(){
  const wrapper=$("recipe-controls");if(!wrapper)return;
@@ -202,7 +252,7 @@ function wire(){
   $("copy-shopping").addEventListener("click",async()=>{try{await copy(textShopping());message("planner-status","Shopping list copied.")}catch(_){message("planner-status","Clipboard unavailable. Download CSV instead.")}});
   $("copy-anylist").addEventListener("click",async()=>{const items=shoppingRows();if(!items.length){message("planner-status","No groceries to transfer: add recipes first or check the pantry quantities.");return}try{await copy(anylistShopping());message("planner-status",items.length+" grocery items copied. Open your shared AnyList list, tap Add Item, then paste the items. Check the quantities before shopping.")}catch(_){message("planner-status","Clipboard unavailable on this device; use the CSV export instead.")}});
   $("download-shopping").addEventListener("click",()=>download("family-recipes-shopping.csv","\ufeff"+csvShopping(),"text/csv;charset=utf-8"));
-  $("new-trip").addEventListener("click",newTrip);$("cook-first").addEventListener("click",cookFirst);renderPlan();renderShopping()
+  $("new-trip").addEventListener("click",newTrip);$("cook-first").addEventListener("click",cookFirst);renderPlan();renderShopping();renderHistory()
  }
 }
 async function start(){
