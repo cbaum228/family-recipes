@@ -5,7 +5,7 @@ description: "Blended root vegetables, fennel, leeks and shredded chicken for a 
 status: ready-to-test
 category: "Soup"
 cuisine: "European-inspired"
-family_meals: 5
+servings: 10
 nutrition_verified: false
 tags:
 - "high-protein"
@@ -99,7 +99,7 @@ steps:
 - "Add diced roots, chicken stock, and thyme; simmer until the vegetables are soft, about 20–30 minutes."
 - "Cook the chicken separately to an internal temperature of 165°F, then shred or dice. Alternatively poach the chicken in the soup and verify doneness."
 - "Blend part of the vegetable broth for a creamy consistency, leaving some chunks. Add milk and chicken, heat through gently, and finish with lemon."
-- "Reserve a low-sodium, tender portion before adding any salt or strongly seasoned toppings. Weigh the complete cooked batch for logging."
+- "Season to taste and weigh the complete cooked batch for logging."
 ---
 
 ## Cooking notes

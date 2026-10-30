@@ -3,7 +3,7 @@ layout: default
 title: Browse Recipes
 ---
 <section class="hero"><p class="eyebrow">THE GROWING COOKBOOK</p><h1>Good food, <em>worth repeating.</em></h1>
-<p>Recipes that don't disappear into old chats. Plan family-sized batches, track ingredients, and find what you can cook with what's on hand.</p>
+<p>Recipes that don't disappear into old chats. Scale recipe servings, track ingredients, and find what you can cook with what's on hand.</p>
 <div class="actions"><a class="action" href="{{ '/pantry/' | relative_url }}">What's in my pantry?</a><a class="action secondary" href="{{ '/planner/' | relative_url }}">Plan meals</a></div></section>
 <section class="panel"><h2>Find a recipe</h2><label for="recipe-search">Search by name, cuisine or ingredient</label><input type="search" id="recipe-search" placeholder="Try potatoes, chili or Indian…"><div id="recipe-cards" class="cards">
 {% assign sorted = site.recipes | sort: 'title' %}

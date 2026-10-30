@@ -5,7 +5,7 @@ description: "Mumbai-inspired spiced mashed vegetables plus separately cooked, p
 status: ready-to-test
 category: "Indian"
 cuisine: "Indian-inspired"
-family_meals: 5
+servings: 10
 nutrition_verified: false
 tags:
 - "high-protein"
@@ -101,8 +101,8 @@ steps:
 - "Cook onions and bell peppers in half of the butter until soft. Add ginger, garlic, crushed tomatoes, and half the pav bhaji masala; cook down until thick."
 - "Mash the vegetables into the tomato mixture; add water as needed for a spoonable consistency."
 - "Separately brown the ground chicken in oil, with the remaining masala and garlic or ginger to taste. Cook all poultry to 165°F."
-- "Finish the bhaji with remaining butter and lemon juice. Serve the chicken on top or alongside to control individual portions."
-- "Keep bread rolls and extra butter as separate foods for accurate MacroFactor logging. Make a lightly seasoned toddler portion before adding hot chili or additional salt."
+- "Finish the bhaji with remaining butter and lemon juice. Serve the chicken on top or alongside the bhaji."
+- "Keep bread rolls and extra butter as separate foods for accurate MacroFactor logging. Adjust chili heat and salt to taste."
 ---
 
 ## Cooking notes

@@ -5,7 +5,7 @@ description: "Protein-forward ground-beef chili with black beans, bell peppers a
 status: ready-to-test
 category: "Comfort food"
 cuisine: "Tex-Mex-inspired"
-family_meals: 5
+servings: 10
 nutrition_verified: false
 tags:
 - "high-protein"
@@ -100,7 +100,7 @@ steps:
 - "Soften diced onions and peppers in olive oil. Add garlic, cumin, chili blend, smoked paprika, and tomato paste; cook briefly until fragrant."
 - "Return meat to pot with tomatoes and stock. Simmer 20 minutes."
 - "Add sweet potato cubes and simmer until tender, around 15–25 minutes depending on size."
-- "Stir in rinsed black beans; simmer 5–10 minutes more and adjust seasoning. If serving a toddler, set aside a low-salt, low-heat portion and mash the beans."
+- "Stir in rinsed black beans; simmer 5–10 minutes more and adjust seasoning. Adjust seasoning to taste."
 - "Cool and refrigerate promptly in shallow containers; weigh cooked yield, then portion and freeze."
 ---
 

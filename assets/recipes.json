@@ -11,7 +11,7 @@ permalink: /assets/recipes.json
 "category": {{ r.category | jsonify }},
 "cuisine": {{ r.cuisine | jsonify }},
 "tags": {{ r.tags | jsonify }},
-"family_meals": {{ r.family_meals | plus: 0 }},
+"servings": {{ r.servings | plus: 0 }},
 "nutrition_verified": {{ r.nutrition_verified | default: false | jsonify }},
 "ingredients": {{ r.ingredients | jsonify }}
 }{% endfor %}

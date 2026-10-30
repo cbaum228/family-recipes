@@ -6,19 +6,19 @@ const $=id=>document.getElementById(id);
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);if(cls)n.className=cls;return n};
 const fmt=(n,u)=>new Intl.NumberFormat("en-US",{maximumFractionDigits:n<10?1:0}).format(Math.max(0,n))+" "+u;
 const ID=()=>typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2);
-const maxMeals=n=>{const v=Number(n);return Number.isFinite(v)&&v>=.5&&v<=50?Math.round(v*2)/2:null};
+const validServings=n=>{const v=Number(n);return Number.isFinite(v)&&v>=.5&&v<=50?Math.round(v*2)/2:null};
 const empty=()=>({version:2,lots:[],plan:[],cooked:[]});
 let state=empty(),recipes=[],recipeById=new Map(),foods=new Map();
 function safeState(obj){
   if(!obj||!Array.isArray(obj.lots)||!Array.isArray(obj.plan)||!Array.isArray(obj.cooked))return null;
   const lots=obj.lots.slice(0,3000).filter(x=>x&&typeof x.key==="string"&&x.key.length<180&&["g","ml"].includes(x.unit)&&Number.isFinite(Number(x.qty))&&Number(x.qty)>=0&&Number(x.qty)<1e8).map(x=>({id:String(x.id||ID()),key:x.key,name:String(x.name||x.key).slice(0,160),unit:x.unit,qty:Number(x.qty),expires:/^\d{4}-\d{2}-\d{2}$/.test(x.expires||"")?x.expires:"",aisle:String(x.aisle||"Other").slice(0,70)}));
-  const plan=obj.plan.slice(0,500).filter(x=>x&&typeof x.recipeId==="string"&&maxMeals(x.meals)!==null).map(x=>({id:String(x.id||ID()),recipeId:x.recipeId,meals:maxMeals(x.meals),day:String(x.day||"").slice(0,30)}));
+  const plan=obj.plan.slice(0,500).filter(x=>x&&typeof x.recipeId==="string"&&validServings(x.servings??(x.meals!=null?Number(x.meals)*2.1:NaN))!==null).map(x=>({id:String(x.id||ID()),recipeId:x.recipeId,servings:validServings(x.servings??(x.meals!=null?Number(x.meals)*2.1:NaN)),day:String(x.day||"").slice(0,30)}));
   const cooked=obj.cooked.slice(-300).filter(x=>x&&typeof x.recipeId==="string").map(x=>({recipeId:x.recipeId,date:String(x.date||"").slice(0,10),category:String(x.category||"").slice(0,60)}));
   return {version:2,lots,plan,cooked};
 }
 try{const p=localStorage.getItem(KEY);if(p)state=safeState(JSON.parse(p))||empty()}catch(_){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch(_){return false}}
-function amountRequired(r,m){return(r.ingredients||[]).map(i=>({...i,need:Number(i.amount)*m/Number(r.family_meals||1)})).filter(i=>Number.isFinite(i.need)&&i.need>0)}
+function amountRequired(r,m){return(r.ingredients||[]).map(i=>({...i,need:Number(i.amount)*m/Number(r.servings||1)})).filter(i=>Number.isFinite(i.need)&&i.need>0)}
 function ikey(i){return String(i.shopping_key||i.name).trim().toLowerCase()+"|"+String(i.unit||"g")}
 function available(i){const k=ikey(i);return state.lots.reduce((s,l)=>s+(l.key===k?l.qty:0),0)}
 function daysLeft(iso){if(!iso)return null;const d=new Date(iso+"T12:00:00"),now=new Date();now.setHours(12,0,0,0);return Number.isFinite(d.getTime())?Math.round((d-now)/86400000):null}
@@ -57,8 +57,8 @@ function addPantry(){
  state.lots.push({id:ID(),key:f.key,name:f.name,unit:f.unit,qty,expires,aisle:f.aisle});
  save();renderPantry();renderSuggestions();renderShopping();message("pantry-status",f.name+" added. A separate lot is retained so use-by dates stay meaningful.");
 }
-function suggest(r,meals){
- const ing=amountRequired(r,meals);
+function suggest(r,servings){
+ const ing=amountRequired(r,servings);
  if(!ing.length)return null;
  let weight=0,covered=0,full=0,near=false,anyStock=false;
  const missing=[];
@@ -75,8 +75,8 @@ function suggest(r,meals){
 }
 function renderSuggestions(){
  const target=$("suggestions");if(!target||!recipes.length)return;clear(target);
- const meals=maxMeals($("suggest-meals").value)||5;
- const scored=recipes.map(r=>suggest(r,meals)).filter(Boolean).sort((a,b)=>b.score-a.score||a.missing.length-b.missing.length);
+ const servings=validServings($("suggest-servings").value)||5;
+ const scored=recipes.map(r=>suggest(r,servings)).filter(Boolean).sort((a,b)=>b.score-a.score||a.missing.length-b.missing.length);
  for(const x of scored){
  const card=el("article",null,"recipe-card");const headline=el("h3"),link=el("a",x.r.name);link.href=x.r.url;headline.append(link);
  card.append(el("div",x.r.category+" · "+x.full+"/"+x.total+" ingredients fully covered","eyebrow"),headline);
@@ -86,7 +86,7 @@ function renderSuggestions(){
  else card.append(el("p","All required ingredient quantities are accounted for.","ready"));
  const macro=Boolean(x.r.nutrition_verified);
  card.append(el("small",macro?"Verified macros available":"Macros not verified: excluded from ranking","muted"));
- const add=el("button","Plan "+meals+" family meals","light");add.addEventListener("click",()=>{state.plan.push({id:ID(),recipeId:x.r.id,meals,day:""});save();message("pantry-status","Added "+x.r.name+" to meal planner.");});
+ const add=el("button","Plan "+servings+" family servings","light");add.addEventListener("click",()=>{state.plan.push({id:ID(),recipeId:x.r.id,servings,day:""});save();message("pantry-status","Added "+x.r.name+" to meal planner.");});
  card.append(add);target.append(card)
  }
 }
@@ -94,7 +94,7 @@ function mergedPlan(){
  const map=new Map();
  for(const p of state.plan){
   const r=recipeById.get(p.recipeId);if(!r)continue;
-  for(const i of amountRequired(r,p.meals)){
+  for(const i of amountRequired(r,p.servings)){
     if(i.shopping_key==="water")continue;
     const key=ikey(i);
     if(!map.has(key))map.set(key,{key,name:i.shopping_name||i.name,unit:i.unit,aisle:i.aisle||"Other",needed:0});
@@ -109,9 +109,9 @@ function renderPlan(){
  for(const p of state.plan){
  const r=recipeById.get(p.recipeId);if(!r)continue;
  const line=el("div",null,"inventory-row"),content=el("div"),a=el("a",r.name);a.href=r.url;
- content.append(a,el("div",p.meals+" family meals"+(p.day?" · "+p.day:""),"muted"));
- const controls=el("div",null,"row-actions"),n=el("input");n.type="number";n.min=".5";n.max="50";n.step=".5";n.value=p.meals;n.setAttribute("aria-label","Family meals of "+r.name);
- n.addEventListener("change",()=>{const v=maxMeals(n.value);if(v===null){n.value=p.meals;return}p.meals=v;save();renderPlan();renderShopping()});
+ content.append(a,el("div",p.servings+" family servings"+(p.day?" · "+p.day:""),"muted"));
+ const controls=el("div",null,"row-actions"),n=el("input");n.type="number";n.min=".5";n.max="50";n.step=".5";n.value=p.servings;n.setAttribute("aria-label","Family servings of "+r.name);
+ n.addEventListener("change",()=>{const v=validServings(n.value);if(v===null){n.value=p.servings;return}p.servings=v;save();renderPlan();renderShopping()});
  const rm=el("button","Remove","light");rm.addEventListener("click",()=>{state.plan=state.plan.filter(x=>x.id!==p.id);save();renderPlan();renderShopping()});
  controls.append(n,rm);line.append(content,controls);target.append(line)
  }
@@ -133,7 +133,7 @@ function cookFirst(){
  const p=state.plan[0];if(!p){message("planner-status","Add a recipe first.");return}
  const r=recipeById.get(p.recipeId);if(!r)return;
  if(!confirm("Mark "+r.name+" as cooked and subtract its available ingredients from this device's pantry? Check actual amounts used before confirming."))return;
- for(const i of amountRequired(r,p.meals)){
+ for(const i of amountRequired(r,p.servings)){
    let left=i.need;const lots=state.lots.filter(l=>l.key===ikey(i)).sort((a,b)=>(a.expires||"9999").localeCompare(b.expires||"9999"));
    for(const lot of lots){const used=Math.min(lot.qty,left);lot.qty-=used;left-=used;if(left<=0)break}
  }
@@ -143,11 +143,11 @@ function cookFirst(){
 function initIndex(){const search=$("recipe-search"),cards=[...document.querySelectorAll(".recipe-card[data-search]")];if(!search)return;const filter=()=>{let shown=0;for(const c of cards){c.hidden=!c.dataset.search.includes(search.value.toLowerCase().trim());if(!c.hidden)shown++}const none=$("no-matches");if(none)none.hidden=shown!==0};search.addEventListener("input",filter)}
 function initRecipe(){
  const wrapper=$("recipe-controls");if(!wrapper)return;
- const id=wrapper.dataset.id,base=Number(wrapper.dataset.base),input=$("recipe-meals"),rows=[...document.querySelectorAll(".ingredient-row")];
- const scale=()=>{const meals=maxMeals(input.value)||base;for(const row of rows)row.querySelector(".scaled-amount").textContent=fmt(Number(row.dataset.amount)*meals/base,row.dataset.unit)};
+ const id=wrapper.dataset.id,base=Number(wrapper.dataset.base),input=$("recipe-servings"),rows=[...document.querySelectorAll(".ingredient-row")];
+ const scale=()=>{const servings=validServings(input.value)||base;for(const row of rows)row.querySelector(".scaled-amount").textContent=fmt(Number(row.dataset.amount)*servings/base,row.dataset.unit)};
  input.addEventListener("input",scale);
- $("add-recipe-plan").addEventListener("click",()=>{const meals=maxMeals(input.value);if(meals===null){message("recipe-feedback","Enter 0.5–50 family meals.");return}state.plan.push({id:ID(),recipeId:id,meals,day:""});save();message("recipe-feedback","Added to meal planner on this device.")});
- $("copy-recipe").addEventListener("click",async()=>{const meals=maxMeals(input.value)||base,lines=[document.querySelector("h1").textContent,meals+" family meals","Ingredients:",...rows.map(row=>fmt(Number(row.dataset.amount)*meals/base,row.dataset.unit)+" "+row.dataset.name),"Instructions:",...[...document.querySelectorAll(".panel ol li")].map((n,j)=>(j+1)+". "+n.textContent)];try{await copy(lines.join("\n"));message("recipe-feedback","Scaled recipe copied for MacroFactor AI import.")}catch(_){message("recipe-feedback","Clipboard unavailable on this device.")}});
+ $("add-recipe-plan").addEventListener("click",()=>{const servings=validServings(input.value);if(servings===null){message("recipe-feedback","Enter 0.5–50 family servings.");return}state.plan.push({id:ID(),recipeId:id,servings,day:""});save();message("recipe-feedback","Added to meal planner on this device.")});
+ $("copy-recipe").addEventListener("click",async()=>{const servings=validServings(input.value)||base,lines=[document.querySelector("h1").textContent,servings+" family servings","Ingredients:",...rows.map(row=>fmt(Number(row.dataset.amount)*servings/base,row.dataset.unit)+" "+row.dataset.name),"Instructions:",...[...document.querySelectorAll(".panel ol li")].map((n,j)=>(j+1)+". "+n.textContent)];try{await copy(lines.join("\n"));message("recipe-feedback","Scaled recipe copied for MacroFactor AI import.")}catch(_){message("recipe-feedback","Clipboard unavailable on this device.")}});
  const link=$("copy-link");if(link)link.addEventListener("click",async()=>{try{await copy(location.href);link.textContent="Copied!"}catch(_){link.textContent="Copy from address bar"}});
  scale();
 }
@@ -155,16 +155,16 @@ function wire(){
  initIndex();initRecipe();
  if($("pantry-food")){
  setPantryOptions();$("pantry-add").addEventListener("click",addPantry);
- $("suggest-meals").addEventListener("change",renderSuggestions);
+ $("suggest-servings").addEventListener("change",renderSuggestions);
  $("export-backup").addEventListener("click",()=>download("family-recipes-private-backup.json",JSON.stringify(state,null,2)+"\n"));
  $("import-backup").addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{const candidate=safeState(JSON.parse(await f.text()));if(!candidate)throw Error("Invalid");if(!confirm("Replace all pantry items, meal plans and history on this device with the selected backup?"))return;state=candidate;save();renderPantry();renderSuggestions();renderPlan();renderShopping();message("pantry-status","Private backup imported.")}catch(_){message("pantry-status","Invalid backup file.")}finally{e.target.value=""}});
  renderPantry();renderSuggestions()
  }
  if($("plan-recipe")){
   const sel=$("plan-recipe");clear(sel);for(const r of recipes)option(sel,r.id,r.name);
-  if(recipes.length)$("plan-meals").value=recipes[0].family_meals;
-  sel.addEventListener("change",()=>{const r=recipeById.get(sel.value);if(r)$("plan-meals").value=r.family_meals});
-  $("plan-add").addEventListener("click",()=>{const meals=maxMeals($("plan-meals").value),r=recipeById.get(sel.value);if(!r||meals===null){message("planner-status","Choose a recipe and a valid batch size.");return}state.plan.push({id:ID(),recipeId:r.id,meals,day:$("plan-day").value});save();renderPlan();renderShopping();message("planner-status","Added "+r.name)});
+  if(recipes.length)$("plan-servings").value=recipes[0].servings;
+  sel.addEventListener("change",()=>{const r=recipeById.get(sel.value);if(r)$("plan-servings").value=r.servings});
+  $("plan-add").addEventListener("click",()=>{const servings=validServings($("plan-servings").value),r=recipeById.get(sel.value);if(!r||servings===null){message("planner-status","Choose a recipe and a valid batch size.");return}state.plan.push({id:ID(),recipeId:r.id,servings,day:$("plan-day").value});save();renderPlan();renderShopping();message("planner-status","Added "+r.name)});
   $("copy-shopping").addEventListener("click",async()=>{try{await copy(textShopping());message("planner-status","Shopping list copied.")}catch(_){message("planner-status","Clipboard unavailable. Download CSV instead.")}});
   $("download-shopping").addEventListener("click",()=>download("family-recipes-shopping.csv","\ufeff"+csvShopping(),"text/csv;charset=utf-8"));
   $("cook-first").addEventListener("click",cookFirst);renderPlan();renderShopping()
@@ -172,7 +172,7 @@ function wire(){
 }
 async function start(){
  try{const res=await fetch(window.CB_CATALOG,{cache:"no-store"});if(!res.ok)throw Error("Catalog fetch failed");
- const data=await res.json();recipes=Array.isArray(data)?data.filter(r=>r&&r.id&&Array.isArray(r.ingredients)&&Number(r.family_meals)>0):[];
+ const data=await res.json();recipes=Array.isArray(data)?data.filter(r=>r&&r.id&&Array.isArray(r.ingredients)&&Number(r.servings)>0):[];
  recipeById=new Map(recipes.map(r=>[r.id,r]));buildFoods();
  }catch(_){message("pantry-status","Could not load recipe catalog; enable GitHub Pages and reload.");message("planner-status","Could not load recipe catalog.");}
  wire()

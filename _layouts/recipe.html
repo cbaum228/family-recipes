@@ -5,13 +5,13 @@ layout: default
 <p><a href="{{ '/' | relative_url }}">← All recipes</a></p>
 <p class="eyebrow">{{ page.category | escape }} · {% if page.status == 'ready-to-test' %}First test / unverified{% elsif page.status == 'tested' %}Tested{% else %}Archive — incomplete{% endif %}</p>
 <h1>{{ page.title | escape }}</h1><p>{{ page.description | escape }}</p>
-<p class="muted">Makes {{ page.family_meals | default: 1 }} family meal(s). Nutrition and toddler portions need individual review.</p></header>
+<p class="muted">Makes approximately {{ page.servings | default: 1 }} servings (full-size reference portions).</p></header>
 {% if page.status == 'needs-reconstruction' %}
 <aside class="notice">Historical notes, not a complete recipe. Do not import into MacroFactor as a finalized recipe.</aside>
 {% else %}
 <aside class="notice">Planned measurements; not yet cooked or nutrition-verified. Inspect ingredient matches before importing into MacroFactor, and log the actual finished batch weight.</aside>
-<section class="panel recipe-controls" id="recipe-controls" data-id="{{ page.slug | escape }}" data-base="{{ page.family_meals }}">
-<h2>Adjust family batch</h2><label>Family meals <input type="number" id="recipe-meals" min=".5" max="50" step=".5" value="{{ page.family_meals }}"></label>
+<section class="panel recipe-controls" id="recipe-controls" data-id="{{ page.slug | escape }}" data-base="{{ page.servings }}">
+<h2>Adjust recipe yield</h2><label>Servings <input type="number" id="recipe-servings" min=".5" max="50" step=".5" value="{{ page.servings }}"></label>
 <button id="add-recipe-plan">Add to meal plan</button><button id="copy-recipe">Copy scaled recipe for MacroFactor</button>
 <p id="recipe-feedback" class="muted" role="status"></p>
 </section>
@@ -34,7 +34,7 @@ layout: default
 "description":{{ page.description | jsonify }},
 "recipeCategory":{{ page.category | jsonify }},
 "recipeCuisine":{{ page.cuisine | jsonify }},
-"recipeYield":{{ page.family_meals | append: " family meals" | jsonify }},
+"recipeYield":{{ page.servings | append: " servings" | jsonify }},
 "recipeIngredient":[{% for i in page.ingredients %}{% unless forloop.first %},{% endunless %}{{ i.amount | append: " " | append: i.unit | append: " " | append: i.name | jsonify }}{% endfor %}],
 "recipeInstructions":[{% for s in page.steps %}{% unless forloop.first %},{% endunless %}{"@type":"HowToStep","text":{{ s | jsonify }}}{% endfor %}]
 }
