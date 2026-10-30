@@ -5,7 +5,7 @@ description: "Mumbai-inspired spiced mashed vegetables plus separately cooked, p
 status: ready-to-test
 category: "Indian"
 cuisine: "Indian-inspired"
-servings: 10
+servings: 8
 nutrition_verified: false
 tags:
 - "high-protein"

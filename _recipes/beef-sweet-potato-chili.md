@@ -5,7 +5,7 @@ description: "Protein-forward ground-beef chili with black beans, bell peppers a
 status: ready-to-test
 category: "Comfort food"
 cuisine: "Tex-Mex-inspired"
-servings: 10
+servings: 8
 nutrition_verified: false
 tags:
 - "high-protein"

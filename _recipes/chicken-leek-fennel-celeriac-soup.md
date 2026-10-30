@@ -5,7 +5,7 @@ description: "Blended root vegetables, fennel, leeks and shredded chicken for a 
 status: ready-to-test
 category: "Soup"
 cuisine: "European-inspired"
-servings: 10
+servings: 8
 nutrition_verified: false
 tags:
 - "high-protein"
