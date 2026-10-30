@@ -3,13 +3,13 @@ layout: default
 ---
 <header class="hero narrow">
 <p><a href="{{ '/' | relative_url }}">← All recipes</a></p>
-<p class="eyebrow">{{ page.category | escape }} · {% if page.status == 'ready-to-test' %}First test / unverified{% elsif page.status == 'tested' %}Tested{% else %}Archive — incomplete{% endif %}</p>
+<p class="eyebrow">{{ page.category | escape }} · {% if page.status == 'ready-to-test' and page.historically_cooked %}Historical cook / quantities to verify{% elsif page.status == 'ready-to-test' %}First test / unverified{% elsif page.status == 'tested' %}Tested{% else %}Archive — incomplete{% endif %}</p>
 <h1>{{ page.title | escape }}</h1><p>{{ page.description | escape }}</p>
 <p class="muted">Makes approximately {{ page.servings | default: 1 }} servings (full-size reference portions).</p></header>
 {% if page.status == 'needs-reconstruction' %}
 <aside class="notice">Historical notes, not a complete recipe. Do not import into MacroFactor as a finalized recipe.</aside>
 {% else %}
-<aside class="notice">Planned measurements; not yet cooked or nutrition-verified. Inspect ingredient matches before importing into MacroFactor, and log the actual finished batch weight.</aside>
+<aside class="notice">{% if page.historically_cooked %}Reconstructed from a previous cooking conversation. Historical quantities may include estimated metric conversions; verify against the current batch before importing into MacroFactor.{% else %}Proposed recipe, not yet cooked or nutrition-verified. Verify any estimated metric conversions and the finished batch yield before importing into MacroFactor.{% endif %}</aside>
 <section class="panel recipe-controls" id="recipe-controls" data-id="{{ page.slug | escape }}" data-base="{{ page.servings }}">
 <h2>Adjust recipe yield</h2><label>Servings <input type="number" id="recipe-servings" min=".5" max="50" step=".5" value="{{ page.servings }}"></label>
 <button id="add-recipe-plan">Add to meal plan</button><button id="copy-recipe">Copy scaled recipe for MacroFactor</button>
@@ -20,14 +20,21 @@ layout: default
 <div id="recipe-ingredients">
 {% for i in page.ingredients %}
 <div class="ingredient-row" data-name="{{ i.name | escape }}" data-amount="{{ i.amount }}" data-unit="{{ i.unit | escape }}">
-  <span>{{ i.name | escape }}{% if i.note %}<small> — {{ i.note | escape }}</small>{% endif %}</span>
+  <span>{{ i.name | escape }}</span>
   <span class="ingredient-measure">
     <strong class="scaled-amount">{{ i.amount }} {{ i.unit }}</strong>
     <span class="us-equivalent">({% if i.unit == 'g' %}{% if i.amount >= 453.59237 %}{{ i.amount | divided_by: 453.59237 | round: 1 }} lb{% else %}{{ i.amount | divided_by: 28.349523125 | round: 1 }} oz{% endif %}{% elsif i.unit == 'ml' %}{{ i.amount | divided_by: 29.5735295625 | round: 1 }} fl oz{% endif %})</span>
   </span>
 </div>
 {% endfor %}
-</div></section>
+</div>
+{% assign has_source_notes = false %}{% for i in page.ingredients %}{% if i.note %}{% assign has_source_notes = true %}{% endif %}{% endfor %}
+{% if has_source_notes %}
+<details class="ingredient-notes"><summary>Original measures and reconstruction notes</summary>
+<ul>{% for i in page.ingredients %}{% if i.note %}<li><strong>{{ i.name | escape }}:</strong> {{ i.note | escape }}</li>{% endif %}{% endfor %}</ul>
+</details>
+{% endif %}
+</section>
 <section class="panel"><h2>Instructions</h2><ol>{% for s in page.steps %}<li>{{ s | escape }}</li>{% endfor %}</ol></section>
 {% if page.status != 'needs-reconstruction' %}
 <section class="panel"><h2>MacroFactor</h2><p>Use <strong>New Recipe → Import from Link</strong> with this page URL for the baseline recipe, or copy the scaled recipe above for AI text import. Check all ingredient mappings. Weigh the final cooked yield and enter its total weight.</p><button id="copy-link">Copy recipe link</button></section>
