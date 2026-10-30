@@ -23,3 +23,7 @@
 If the app grows beyond a couple of household members, consider a small managed database with per-household authorization (for example Supabase with Row Level Security). This avoids whole-file write conflicts and supports real-time subscriptions, while keeping GitHub Pages hosting and Markdown recipes unchanged.
 
 The goal is a plug-in sync adapter, not a second private GitHub Pages repository. Forks remain useful without requiring Drive setup: local-only operation should always be available.
+
+## Shopping events and multi-device consistency
+
+The site now records purchase checkoffs, added pantry lot IDs, and actual cooking ingredient deductions locally. Drive sync must synchronize the **entire household state** (lots, planned recipes, purchased checklist entries and cooking history) and reconcile concurrent changes. A purchase checkbox and its added lot are a single logical transaction. Similarly, logging a cooked meal and deducting its ingredient quantities must be applied together, once, or the pantry could double-count or lose stock after two-device edits. Include stable event IDs, remote-revision checks, conflict resolution and user-visible sync status before enabling shared editing. Do not publish data or authentication tokens in GitHub Pages or GitHub repos.
