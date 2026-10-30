@@ -16,7 +16,12 @@ let db=null,auth=null,user=null,householdId=localStorage.getItem(HOUSE_KEY)||"",
 let base=null,busy=false,stalled=false,debounce=0,pending=false;
 let lastCloud=null;
 function clone(x){return JSON.parse(JSON.stringify(x))}
-function equal(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+function canonical(value){
+ if(Array.isArray(value))return value.map(canonical);
+ if(value&&typeof value==="object")return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
+ return value
+}
+function equal(a,b){return JSON.stringify(canonical(a))===JSON.stringify(canonical(b))}
 function nonempty(s){return ["lots","plan","shopping","cooked"].some(k=>Array.isArray(s?.[k])&&s[k].length>0)}
 function normalize(data){const v=bridge?.normalize(data);if(!v)throw Error("Invalid household data format");return v}
 function cacheKey(){return CACHE_KEY+settings.projectId+":"+householdId+":"+(user?.uid||"")}
@@ -45,7 +50,7 @@ function merge(baseState,localState,remoteState){
  }
  return normalize(merged)
 }
-function safeSize(x){if(JSON.stringify(x).length>800000)throw Error("Household is approaching Firestore's document size limit. Export data before continuing.")}
+function safeSize(x){if(new TextEncoder().encode(JSON.stringify(x)).length>750000)throw Error("Household is approaching Firestore\'s document size limit. Export data before continuing.")}
 function canSync(){return !!(user&&houseRef&&bridge&&base&&!stalled)}
 function redraw(){
  if($("fb-user-uid"))$("fb-user-uid").textContent=user?.uid||"Not signed in";
@@ -66,7 +71,8 @@ function takeCloud(){
  setStatus("Cloud household loaded. Synchronization active.");
 }
 async function flush(){
- if(!canSync()||busy)return;
+ if(busy){pending=true;return}
+ if(!canSync())return;
  busy=true;
  const before=bridge.snapshot();
  try{
@@ -100,6 +106,8 @@ function queue(){
 }
 function receive(snap){
  if(snap.metadata.hasPendingWrites||!snap.exists())return;
+ // Do not alter the baseline while an authenticated transaction is in flight.
+ if(busy){pending=true;return}
  let remote;
  try{remote=cloudData(snap)}catch(e){setStatus(e.message,true);return}
  lastCloud={...remote.meta,data:remote.payload};
