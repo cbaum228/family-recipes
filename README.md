@@ -1,6 +1,6 @@
 # Family Recipes
 
-Markdown-first public cookbook, built for GitHub Pages, with a private-to-your-browser pantry, meal planning and shopping list.
+Markdown-first public cookbook, built for GitHub Pages, with an offline-friendly pantry, meal planning, shopping checklists and optional private Firebase Spark synchronization.
 
 ## Open the cookbook
 After GitHub Pages is enabled, visit **https://cbaum228.github.io/family-recipes/**.
@@ -12,26 +12,27 @@ After GitHub Pages is enabled, visit **https://cbaum228.github.io/family-recipes
 - Pantry quantities and optional use-by dates in your browser. Recipe recommendations consider quantity-weighted pantry coverage, nearing use-by dates, and recent cuisine variety. No unverified macro estimates are fabricated.
 - Grocery trip checklist that freezes missing items from planned recipes. Checking off a purchased item adds the actual quantity (and optional use-by date) to the pantry. Purchased items remain visible; AnyList bulk paste and CSV are optional fallbacks.
 - A Cook action on every planned recipe lets you edit actual ingredient quantities, enter extras from the known ingredient catalog, record final cooked weight, and deduct pantry stock after confirmation. Cooking history retains actual ingredient amounts.
-- JSON backup and import for moving private household data between devices.
+- JSON backup and import for offline records, plus optional Google sign-in and private Firestore realtime household sync.
 
 ## Privacy and limitations
-**The GitHub repository and GitHub Pages website are public.** The site does not publish your pantry, food logs, family schedule, or private meal history. Your browser stores those values in `localStorage`, so they are not available on other devices and can be lost if site data is cleared. Download a private backup regularly; do not commit that backup to any public repository.
 
-A private GitHub repository is **not** automatically a private web database, and private GitHub Pages sites are not necessarily private to viewers. No GitHub token or secrets should be placed in frontend code. Household synchronization requires an authenticated service in a later phase.
+**Recipes and the GitHub Pages site are public.** Pantry, shopping trips, meal plans and cooking history are kept in browser-local storage until you opt in to Firebase. In Firebase Spark mode, a single private Firestore household document synchronizes those records for specifically authorized Google accounts. [Security rules](firebase/firestore.rules) restrict data to household members; no private data or secret service-account credentials are published to GitHub.
 
-Recipe serving counts are approximate: weigh cooked recipes, then portion based on their actual cooked weight. Nutrition and recipe imports must be reviewed in MacroFactor. The JSON-LD recipe metadata is for **unscaled baseline** quantities; scaled recipe quantities can be copied as plain text. Optional sides, such as rolls and rice, are logged separately.
+Firebase requires your own free Spark project, Firebase Authentication Google provider, Firestore database, **published security rules**, and Web application config. It is not automatically connected. A Firebase API key identifies the app and is not the access credential protecting Firestore; authorized users and Security Rules are essential.
+
+The local cached data remains on the device even after Google sign-out. Protect shared browser profiles, export periodic private backups, and review conflicting changes rather than forcing an overwrite. Firestore transactions provide atomic single-document updates, and the UI detects same-record conflicts. The current one-document household design is intended for small households (Firestore 1 MiB document limit).
+
+See [Firebase Spark setup](docs/firebase-spark-setup.md). The old Google Drive adapter is no longer loaded.
 
 ## Publish
-In repository **Settings → Pages → Build and deployment**, choose **Deploy from a branch → main → /(root)**. The root uses Jekyll to build the Markdown recipe collection into public HTML pages.
+
+In GitHub repository **Settings → Pages**, choose **Deploy from a branch → main → /(root)**. Jekyll builds the Markdown cookbook into public HTML pages.
 
 ## Add a recipe
-Copy one of the complete Markdown files in `_recipes/`. Each ingredient needs a numeric `amount`, canonical `unit` (g or ml), `shopping_key`, `shopping_name` and `aisle`; the last fields allow pantry matching and merged shopping quantities. Use `status: ready-to-test` until cooked and reviewed; do not mark a recipe `nutrition_verified: true` until its source and calculations are checked.
 
-The cookbook is designed to be forked. Fork the repository, update `url` and `baseurl` in `_config.yml`, and enable GitHub Pages on your own fork. Pantry data stays within the visiting browser and does not flow back to the original repository.
+Copy one of the complete Markdown files in `_recipes/`. Ingredients need numeric `amount`, canonical `unit` (g or ml), `shopping_key`, `shopping_name`, and `aisle` for pantry matching and consolidated shopping lists. Mark recipes `ready-to-test` until you cook and review them.
 
-## Future shared pantry synchronization
-
-See [Google Drive sync design](docs/google-drive-sync.md). The site now has an opt-in Drive sync adapter; cloud syncing activates only after Google Cloud OAuth/Picker configuration, authorization and a selected household file. A Google Drive file shared privately with specified Google accounts can be an opt-in storage backend for household pantry, plans and cooking history, without making those records public. It requires Google OAuth configuration, explicit user sign-in and concurrent-edit handling; do not place Google account credentials or bearer tokens in the public repository.
+The repository is forkable. Friends use their own Github Pages domain and their own Firebase Spark project with the same restrictive rules. No household pantry is shared just by forking recipes.
 
 ## Shopping with AnyList
 
@@ -45,12 +46,12 @@ AnyList instructions: https://help.anylist.com/articles/paste-items/
 2. Click **Build / refresh shopping trip**. The shopping list freezes the missing ingredient quantities after pantry subtraction. Grocery lines remain in the list after checking them off.
 3. Enter actual purchased quantity and optional use-by date, then check the item. This adds a distinct pantry lot. Unchecking removes the lot if it has not already been edited or consumed.
 4. When cooking, click **Cook** beside the planned recipe. Review the default quantities, set skipped ingredients to zero, and add other ingredients from the known catalog. Optionally record finished cooked batch weight for MacroFactor. Confirm to deduct the amounts actually used and save the cooking record.
-5. To shop from another device using the same shared household inventory, the planned private Google Drive sync must be configured and implemented first. Until then, shopping and cooking state are local to the current browser only.
+5. To share the list across devices, configure [Firebase Spark household sync](docs/firebase-spark-setup.md). Until configured, all records stay local to each browser.
 
-Limitations: manually adding arbitrary groceries not already in a planned recipe, undoing partially consumed purchases, recipe substitutions absent from the ingredient catalog, and Google Drive cross-device sync need additional work. Pantry shortages on cooking are confirmed and recorded without allowing negative inventory.
+Limitations: manually adding arbitrary groceries not already in a planned recipe, undoing partially consumed purchases, recipe substitutions absent from the ingredient catalog, and household synchronization needs a configured Firebase project and live testing. Pantry shortages on cooking are confirmed and recorded without allowing negative inventory.
 
-## Set up private Google Drive sync
+## Private Firebase Spark household sync
 
-Visit the **Drive sync** page on the deployed website, or read [Google Drive setup](docs/google-drive-sync.md). Configure OAuth and Google Picker in your own Google Cloud project, save the public Web OAuth Client ID, referrer-restricted Picker API key and project number on each device, authorize `drive.file`, create a private JSON pantry file, and share it with your other household account as Editor. Then use Google Picker on the second device to grant this application permission to the shared file. Do **not** commit private JSON exports, OAuth client secrets or tokens.
+See [the setup guide](docs/firebase-spark-setup.md) and [Security Rules](firebase/firestore.rules). First sign-in creates an owner identity; you create a private household and authorize a spouse by Firebase UID. Both open the same household ID from the cookbook's **Household sync** page.
 
-While connected, changes sync after a short delay and the app pulls roughly every 45 seconds while open. Page reloads can require signing in again because tokens are kept in memory. Drive's single-file updates cannot guarantee database-grade atomic writes; overlapping simultaneous edits are flagged when detectable, but a narrow race remains. Keep local backup exports and test two-device behavior before relying on this for real-time shared shopping.
+When signed in and connected, Firestore snapshots push updates to authorized devices; a small debounce batches local edits into Firestore transactions. Changes to different records can merge, while conflicting changes to the same item require manual review. Initial setup and two-device acceptance testing have not been completed in a user-owned Firebase project.

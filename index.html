@@ -12,4 +12,4 @@ title: Browse Recipes
 <h3><a href="{{ r.url | relative_url }}">{{ r.title | escape }}</a></h3><p>{{ r.description | escape }}</p>
 <div class="tags">{% for tag in r.tags limit:4 %}<span>{{ tag | escape }}</span>{% endfor %}</div></article>{% endfor %}
 </div><p id="no-matches" class="muted" hidden>No matches. Try another ingredient.</p></section>
-<section class="panel"><h2>How the cookbook works</h2><p>Each recipe is stored in a public Markdown file. Your pantry and meal plans are private to your browser and can be exported as a backup. No account required.</p></section>
+<section class="panel"><h2>How the cookbook works</h2><p>Each recipe is stored in a public Markdown file. Your pantry and meal plans stay private in your browser by default. You can optionally sign in to a restricted Firebase household to synchronize your inventory and shopping lists across family devices. Public recipes require no account.</p></section>
