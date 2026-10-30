@@ -17,3 +17,9 @@ input,select{font:inherit;max-width:100%;padding:10px;border:1px solid #bdcbbd;b
 #cooking-history details{border-bottom:1px solid var(--edge);padding:10px 0}
 #cooking-history summary{cursor:pointer;font-weight:600}
 #cooking-history p{overflow-wrap:anywhere}
+
+/* Permanent US-unit helper beside precise metric recipe quantities. */
+.ingredient-measure{display:flex;align-items:baseline;justify-content:flex-end;gap:.4rem;flex-wrap:wrap;text-align:right}
+.ingredient-measure .scaled-amount{white-space:nowrap}
+.ingredient-measure .us-equivalent{font-size:.88em;color:var(--muted);white-space:nowrap;font-weight:400}
+@media(max-width:650px){.ingredient-measure{flex-direction:column;align-items:flex-end;gap:0}}

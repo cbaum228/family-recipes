@@ -6,6 +6,7 @@ Markdown-first public cookbook, built for GitHub Pages, with a private-to-your-b
 After GitHub Pages is enabled, visit **https://cbaum228.github.io/family-recipes/**.
 
 ## Features
+- All recipe ingredient rows always display precise canonical grams/ml followed by an approximate US-unit equivalent in parentheses (lb, oz or fl oz). Both scale automatically when serving counts change; no toggle or ingredient-count estimates. MacroFactor structured recipe data and shopping arithmetic remain metric-only.
 - Searchable, publicly forkable recipes in `_recipes/*.md`, separated into **planned**, **tested**, and **needs-reconstruction**.
 - Per-recipe serving scaling (one serving is a full reference portion, not a household meal); use recipe link import into MacroFactor for baseline quantities or copy the scaled text into its AI importer.
 - Pantry quantities and optional use-by dates in your browser. Recipe recommendations consider quantity-weighted pantry coverage, nearing use-by dates, and recent cuisine variety. No unverified macro estimates are fabricated.

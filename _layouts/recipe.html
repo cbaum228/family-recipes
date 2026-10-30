@@ -16,9 +16,17 @@ layout: default
 <p id="recipe-feedback" class="muted" role="status"></p>
 </section>
 {% endif %}
-<section class="panel"><h2>Ingredients</h2><p class="muted">Raw edible weights unless specifically noted. Optional bread, rice and toppings are logged separately.</p>
+<section class="panel"><h2>Ingredients</h2><p class="muted">Metric amounts are exact recipe inputs; US measures in parentheses are approximate. Optional bread, rice and toppings are logged separately.</p>
 <div id="recipe-ingredients">
-{% for i in page.ingredients %}<div class="ingredient-row" data-name="{{ i.name | escape }}" data-amount="{{ i.amount }}" data-unit="{{ i.unit | escape }}"><span>{{ i.name | escape }}{% if i.note %}<small> — {{ i.note | escape }}</small>{% endif %}</span><strong class="scaled-amount">{{ i.amount }} {{ i.unit }}</strong></div>{% endfor %}
+{% for i in page.ingredients %}
+<div class="ingredient-row" data-name="{{ i.name | escape }}" data-amount="{{ i.amount }}" data-unit="{{ i.unit | escape }}">
+  <span>{{ i.name | escape }}{% if i.note %}<small> — {{ i.note | escape }}</small>{% endif %}</span>
+  <span class="ingredient-measure">
+    <strong class="scaled-amount">{{ i.amount }} {{ i.unit }}</strong>
+    <span class="us-equivalent">({% if i.unit == 'g' %}{% if i.amount >= 453.59237 %}{{ i.amount | divided_by: 453.59237 | round: 1 }} lb{% else %}{{ i.amount | divided_by: 28.349523125 | round: 1 }} oz{% endif %}{% elsif i.unit == 'ml' %}{{ i.amount | divided_by: 29.5735295625 | round: 1 }} fl oz{% endif %})</span>
+  </span>
+</div>
+{% endfor %}
 </div></section>
 <section class="panel"><h2>Instructions</h2><ol>{% for s in page.steps %}<li>{{ s | escape }}</li>{% endfor %}</ol></section>
 {% if page.status != 'needs-reconstruction' %}

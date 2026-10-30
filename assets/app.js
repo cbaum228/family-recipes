@@ -5,6 +5,18 @@ const KEY="family-recipes-household-v2";
 const $=id=>document.getElementById(id);
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);if(cls)n.className=cls;return n};
 const fmt=(n,u)=>new Intl.NumberFormat("en-US",{maximumFractionDigits:n<10?1:0}).format(Math.max(0,n))+" "+u;
+/** US display values are informational only. Recipe math always uses grams or milliliters. */
+const usEquivalent=(quantity,unit)=>{
+  const n=Number(quantity);
+  if(!Number.isFinite(n)||n<0)return "";
+  let value,label;
+  if(unit==="g"){
+    if(n>=453.59237){value=n/453.59237;label="lb"}
+    else{value=n/28.349523125;label="oz"}
+  }else if(unit==="ml"){value=n/29.5735295625;label="fl oz"}
+  else return "";
+  return new Intl.NumberFormat("en-US",{maximumFractionDigits:1}).format(value)+" "+label;
+};
 const ID=()=>typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2);
 const validServings=n=>{const v=Number(n);return Number.isFinite(v)&&v>=.5&&v<=50?Math.round(v*2)/2:null};
 const empty=()=>({version:3,lots:[],plan:[],cooked:[],shopping:[]});
@@ -228,7 +240,7 @@ function initIndex(){const search=$("recipe-search"),cards=[...document.querySel
 function initRecipe(){
  const wrapper=$("recipe-controls");if(!wrapper)return;
  const id=wrapper.dataset.id,base=Number(wrapper.dataset.base),input=$("recipe-servings"),rows=[...document.querySelectorAll(".ingredient-row")];
- const scale=()=>{const servings=validServings(input.value)||base;for(const row of rows)row.querySelector(".scaled-amount").textContent=fmt(Number(row.dataset.amount)*servings/base,row.dataset.unit)};
+ const scale=()=>{const servings=validServings(input.value)||base;for(const row of rows){const amount=Number(row.dataset.amount)*servings/base;row.querySelector(".scaled-amount").textContent=fmt(amount,row.dataset.unit);const secondary=row.querySelector(".us-equivalent");if(secondary)secondary.textContent="("+usEquivalent(amount,row.dataset.unit)+")"}};
  input.addEventListener("input",scale);
  $("add-recipe-plan").addEventListener("click",()=>{const servings=validServings(input.value);if(servings===null){message("recipe-feedback","Enter 0.5–50 family servings.");return}state.plan.push({id:ID(),recipeId:id,servings,day:""});save();message("recipe-feedback","Added to meal planner on this device.")});
  $("copy-recipe").addEventListener("click",async()=>{const servings=validServings(input.value)||base,lines=[document.querySelector("h1").textContent,servings+" family servings","Ingredients:",...rows.map(row=>fmt(Number(row.dataset.amount)*servings/base,row.dataset.unit)+" "+row.dataset.name),"Instructions:",...[...document.querySelectorAll(".panel ol li")].map((n,j)=>(j+1)+". "+n.textContent)];try{await copy(lines.join("\n"));message("recipe-feedback","Scaled recipe copied for MacroFactor AI import.")}catch(_){message("recipe-feedback","Clipboard unavailable on this device.")}});
