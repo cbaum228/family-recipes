@@ -179,7 +179,23 @@ function textShopping(){const rows=shoppingRows();return rows.length?"Shopping l
 function anylistShopping(){return shoppingRows().map(i=>i.name+" ("+fmt(i.buy,i.unit)+")").join("\n")}
 // AnyList's separate *recipe ingredient* paste parser handles amount and ingredient names.
 // Import into a temporary AnyList recipe, then add its ingredients to an existing shared list.
-function anylistRecipeIngredients(){return shoppingRows().map(i=>fmt(i.buy,i.unit)+" "+i.name).join("\n")}
+// Keep the metric inventory as the source of truth. Convert only clipboard export text.
+// Decimal quantities, e.g. "8.1 lb", are recognized by AnyList's recipe ingredient parser.
+function anylistExportAmount(amount,unit,system){
+  if(system==="metric")return fmt(amount,unit);
+  const factor=unit==="g"?(amount>=453.59237?453.59237:28.349523125):
+    unit==="ml"?29.5735295625:null;
+  if(!factor)return fmt(amount,unit);
+  const target=unit==="g"?(amount>=453.59237?"lb":"oz"):"fl oz";
+  const value=amount/factor;
+  // Small quantities retain two decimals to avoid rounding valid amounts to 0.
+  const digits=value<1?2:1;
+  const rounded=Number(value.toFixed(digits));
+  return (rounded===0?Number(value.toPrecision(2)):rounded)+" "+target;
+}
+function anylistRecipeIngredients(system="metric"){
+  return shoppingRows().map(i=>anylistExportAmount(i.buy,i.unit,system)+" "+i.name).join("\n");
+}
 const csvCell=s=>{let v=String(s);if(/^[=+@\\-]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
 function csvShopping(){return ["Department,Ingredient,Needed,On hand,To buy,Unit",...shoppingRows().map(i=>[i.aisle,i.name,i.needed.toFixed(1),i.onHand.toFixed(1),i.buy.toFixed(1),i.unit].map(csvCell).join(","))].join("\r\n")+"\r\n"}
 function cookFirst(){const p=state.plan[0];if(!p){message("planner-status","No planned recipe.");return}editCooking(p.id)}
@@ -269,7 +285,16 @@ function wire(){
   $("plan-add").addEventListener("click",()=>{const servings=validServings($("plan-servings").value),r=recipeById.get(sel.value);if(!r||servings===null){message("planner-status","Choose a recipe and a valid batch size.");return}state.plan.push({id:ID(),recipeId:r.id,servings,day:$("plan-day").value});save();renderPlan();renderShopping();message("planner-status","Added "+r.name)});
   $("copy-shopping").addEventListener("click",async()=>{try{await copy(textShopping());message("planner-status","Shopping list copied.")}catch(_){message("planner-status","Clipboard unavailable. Download CSV instead.")}});
   $("copy-anylist").addEventListener("click",async()=>{const items=shoppingRows();if(!items.length){message("planner-status","No groceries left to export.");return}try{await copy(anylistShopping());message("planner-status",items.length+" grocery names copied, with amounts in parentheses. Paste into your shared AnyList list; AnyList stores quantities as part of the name in this mode.")}catch(_){message("planner-status","Clipboard unavailable on this device.")}});
-  $("copy-anylist-recipe").addEventListener("click",async()=>{const items=shoppingRows();if(!items.length){message("planner-status","No groceries left to export.");return}try{await copy(anylistRecipeIngredients());message("planner-status",items.length+" ingredient lines copied. In AnyList, create a temporary recipe, paste into Ingredients, then Add all ingredients to your existing shared list.")}catch(_){message("planner-status","Clipboard unavailable on this device.")}});
+  for(const [buttonId,system] of [["copy-anylist-recipe-metric","metric"],["copy-anylist-recipe-us","us"]]){
+    $(buttonId).addEventListener("click",async()=>{
+      const items=shoppingRows();
+      if(!items.length){message("planner-status","No groceries left to export.");return}
+      try{
+        await copy(anylistRecipeIngredients(system));
+        message("planner-status",items.length+" ingredients copied in "+(system==="us"?"US units (lb, oz, fl oz)":"metric (g, ml)")+". Paste into a temporary AnyList recipe's Ingredients, then add all to your existing shared list.");
+      }catch(_){message("planner-status","Clipboard unavailable on this device.")}
+    });
+  }
   $("download-shopping").addEventListener("click",()=>download("family-recipes-shopping.csv","\ufeff"+csvShopping(),"text/csv;charset=utf-8"));
   $("new-trip").addEventListener("click",newTrip);$("cook-first").addEventListener("click",cookFirst);renderPlan();renderShopping();renderHistory()
  }
