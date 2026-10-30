@@ -127,6 +127,9 @@ function renderShopping(){
 }
 function shoppingRows(){return mergedPlan().map(i=>({...i,onHand:available(i),buy:Math.max(0,i.needed-available(i))})).filter(i=>i.buy>.01)}
 function textShopping(){const rows=shoppingRows();return rows.length?"Shopping list\n"+rows.map(i=>"☐ "+i.name+": "+fmt(i.buy,i.unit)).join("\n"):"Nothing to buy for the selected recipes."}
+// AnyList bulk paste expects one item per line, with no headings or checkbox glyphs.
+// Put units first for ingredient-style parsing. AnyList quantity-field recognition still needs live verification.
+function anylistShopping(){return shoppingRows().map(i=>`${Math.ceil(i.buy)} ${i.unit} ${i.name}`).join("\n")}
 const csvCell=s=>{let v=String(s);if(/^[=+@\\-]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
 function csvShopping(){return ["Department,Ingredient,Needed,On hand,To buy,Unit",...shoppingRows().map(i=>[i.aisle,i.name,i.needed.toFixed(1),i.onHand.toFixed(1),i.buy.toFixed(1),i.unit].map(csvCell).join(","))].join("\r\n")+"\r\n"}
 function cookFirst(){
@@ -166,6 +169,7 @@ function wire(){
   sel.addEventListener("change",()=>{const r=recipeById.get(sel.value);if(r)$("plan-servings").value=r.servings});
   $("plan-add").addEventListener("click",()=>{const servings=validServings($("plan-servings").value),r=recipeById.get(sel.value);if(!r||servings===null){message("planner-status","Choose a recipe and a valid batch size.");return}state.plan.push({id:ID(),recipeId:r.id,servings,day:$("plan-day").value});save();renderPlan();renderShopping();message("planner-status","Added "+r.name)});
   $("copy-shopping").addEventListener("click",async()=>{try{await copy(textShopping());message("planner-status","Shopping list copied.")}catch(_){message("planner-status","Clipboard unavailable. Download CSV instead.")}});
+  $("copy-anylist").addEventListener("click",async()=>{const items=shoppingRows();if(!items.length){message("planner-status","No groceries to transfer: add recipes first or check the pantry quantities.");return}try{await copy(anylistShopping());message("planner-status",items.length+" grocery items copied. Open your shared AnyList list, tap Add Item, then paste the items. Check the quantities before shopping.")}catch(_){message("planner-status","Clipboard unavailable on this device; use the CSV export instead.")}});
   $("download-shopping").addEventListener("click",()=>download("family-recipes-shopping.csv","\ufeff"+csvShopping(),"text/csv;charset=utf-8"));
   $("cook-first").addEventListener("click",cookFirst);renderPlan();renderShopping()
  }

@@ -9,7 +9,7 @@ After GitHub Pages is enabled, visit **https://cbaum228.github.io/family-recipes
 - Searchable, publicly forkable recipes in `_recipes/*.md`, separated into **planned**, **tested**, and **needs-reconstruction**.
 - Per-recipe serving scaling (one serving is a full reference portion, not a household meal); use recipe link import into MacroFactor for baseline quantities or copy the scaled text into its AI importer.
 - Pantry quantities and optional use-by dates in your browser. Recipe recommendations consider quantity-weighted pantry coverage, nearing use-by dates, and recent cuisine variety. No unverified macro estimates are fabricated.
-- Combined shopping list, subtracting inventory, with copy and CSV download.
+- Combined shopping list, subtracting inventory, with one-tap AnyList bulk-paste text, plain checklist and CSV download. AnyList remains the actual shared shopping/check-off app; quantities must be checked after importing.
 - Mark recipes cooked to deduct available pantry lots (with confirmation) and record cuisine history.
 - JSON backup and import for moving private household data between devices.
 
@@ -31,3 +31,9 @@ The cookbook is designed to be forked. Fork the repository, update `url` and `ba
 ## Future shared pantry synchronization
 
 See [Google Drive sync design](docs/google-drive-sync.md). The current site does **not** sync across devices. A Google Drive file shared privately with specified Google accounts can be an opt-in storage backend for household pantry, plans and cooking history, without making those records public. It requires Google OAuth configuration, explicit user sign-in and concurrent-edit handling; do not place Google account credentials or bearer tokens in the public repository.
+
+## Shopping with AnyList
+
+From **Meal planner**, tap **Copy for AnyList**, then open the shared AnyList grocery list, tap its Add Item field, and use AnyList\'s bulk-paste control. The clipboard contains *only unstocked ingredients*, with one quantity-first line per item and no headings or checkboxes. AnyList categorizes the imported items and lets household members cross them off as usual. Check that AnyList interpreted the quantities correctly, and check for duplicates if pasting into a list that already has items. No direct API access or cross-app pantry updates are implied.
+
+AnyList instructions: https://help.anylist.com/articles/paste-items/
