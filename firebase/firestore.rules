@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function member() {
+      return signedIn() && request.auth.uid in resource.data.memberUids;
+    }
+
+    function validHousehold() {
+      return request.resource.data.keys().hasOnly([
+        'ownerUid', 'memberUids', 'createdAt', 'updatedAt', 'data'
+      ])
+      && request.resource.data.ownerUid is string
+      && request.resource.data.memberUids is list
+      && request.resource.data.memberUids.size() > 0
+      && request.resource.data.memberUids.size() <= 10
+      && request.resource.data.ownerUid in request.resource.data.memberUids
+      && request.resource.data.data is map
+      && request.resource.data.data.keys().hasOnly([
+        'version', 'lots', 'plan', 'cooked', 'shopping'
+      ])
+      && request.resource.data.data.version == 3
+      && request.resource.data.data.lots is list
+      && request.resource.data.data.plan is list
+      && request.resource.data.data.cooked is list
+      && request.resource.data.data.shopping is list;
+    }
+
+    match /households/{householdId} {
+      // No publicly enumerable household collection.
+      allow list: if false;
+      allow get: if member();
+
+      // Anyone may create their *own* initially private household.
+      allow create: if signedIn()
+        && validHousehold()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.memberUids == [request.auth.uid];
+
+      // Members may edit the private household data.
+      // Only the immutable owner can change membership.
+      allow update: if member()
+        && validHousehold()
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (
+          request.resource.data.memberUids == resource.data.memberUids
+          || request.auth.uid == resource.data.ownerUid
+        );
+
+      // Keep explicit deletion disabled to prevent accidental loss.
+      allow delete: if false;
+    }
+
+    // All other paths deny by default.
+  }
+}
