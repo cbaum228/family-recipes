@@ -3,7 +3,9 @@ layout: null
 permalink: /assets/recipes.json
 ---
 [
-{% assign ready = site.recipes | where_exp: "r", "r.status == 'ready-to-test' or r.status == 'tested'" | sort: "title" %}
+{% assign untested = site.recipes | where: "status", "ready-to-test" %}
+{% assign tested = site.recipes | where: "status", "tested" %}
+{% assign ready = untested | concat: tested | sort: "title" %}
 {% for r in ready %}{% unless forloop.first %},{% endunless %}{
 "id": {{ r.slug | jsonify }},
 "name": {{ r.title | jsonify }},
