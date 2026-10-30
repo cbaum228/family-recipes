@@ -174,9 +174,12 @@ function missingPlanRows(){return mergedPlan().map(i=>({...i,onHand:available(i)
   }
  }
 function textShopping(){const rows=shoppingRows();return rows.length?"Shopping list\n"+rows.map(i=>"☐ "+i.name+": "+fmt(i.buy,i.unit)).join("\n"):"Nothing to buy for the selected recipes."}
-// AnyList bulk paste expects one item per line, with no headings or checkbox glyphs.
-// Put units first for ingredient-style parsing. AnyList quantity-field recognition still needs live verification.
-function anylistShopping(){return shoppingRows().map(i=>`${Math.ceil(i.buy)} ${i.unit} ${i.name}`).join("\n")}
+// AnyList list bulk-paste treats each whole line as the *item name*.
+// Put the ingredient first for easier reading/category matching; keep the amount as context.
+function anylistShopping(){return shoppingRows().map(i=>i.name+" ("+fmt(i.buy,i.unit)+")").join("\n")}
+// AnyList's separate *recipe ingredient* paste parser handles amount and ingredient names.
+// Import into a temporary AnyList recipe, then add its ingredients to an existing shared list.
+function anylistRecipeIngredients(){return shoppingRows().map(i=>fmt(i.buy,i.unit)+" "+i.name).join("\n")}
 const csvCell=s=>{let v=String(s);if(/^[=+@\\-]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
 function csvShopping(){return ["Department,Ingredient,Needed,On hand,To buy,Unit",...shoppingRows().map(i=>[i.aisle,i.name,i.needed.toFixed(1),i.onHand.toFixed(1),i.buy.toFixed(1),i.unit].map(csvCell).join(","))].join("\r\n")+"\r\n"}
 function cookFirst(){const p=state.plan[0];if(!p){message("planner-status","No planned recipe.");return}editCooking(p.id)}
@@ -265,7 +268,8 @@ function wire(){
   sel.addEventListener("change",()=>{const r=recipeById.get(sel.value);if(r)$("plan-servings").value=r.servings});
   $("plan-add").addEventListener("click",()=>{const servings=validServings($("plan-servings").value),r=recipeById.get(sel.value);if(!r||servings===null){message("planner-status","Choose a recipe and a valid batch size.");return}state.plan.push({id:ID(),recipeId:r.id,servings,day:$("plan-day").value});save();renderPlan();renderShopping();message("planner-status","Added "+r.name)});
   $("copy-shopping").addEventListener("click",async()=>{try{await copy(textShopping());message("planner-status","Shopping list copied.")}catch(_){message("planner-status","Clipboard unavailable. Download CSV instead.")}});
-  $("copy-anylist").addEventListener("click",async()=>{const items=shoppingRows();if(!items.length){message("planner-status","No groceries to transfer: add recipes first or check the pantry quantities.");return}try{await copy(anylistShopping());message("planner-status",items.length+" grocery items copied. Open your shared AnyList list, tap Add Item, then paste the items. Check the quantities before shopping.")}catch(_){message("planner-status","Clipboard unavailable on this device; use the CSV export instead.")}});
+  $("copy-anylist").addEventListener("click",async()=>{const items=shoppingRows();if(!items.length){message("planner-status","No groceries left to export.");return}try{await copy(anylistShopping());message("planner-status",items.length+" grocery names copied, with amounts in parentheses. Paste into your shared AnyList list; AnyList stores quantities as part of the name in this mode.")}catch(_){message("planner-status","Clipboard unavailable on this device.")}});
+  $("copy-anylist-recipe").addEventListener("click",async()=>{const items=shoppingRows();if(!items.length){message("planner-status","No groceries left to export.");return}try{await copy(anylistRecipeIngredients());message("planner-status",items.length+" ingredient lines copied. In AnyList, create a temporary recipe, paste into Ingredients, then Add all ingredients to your existing shared list.")}catch(_){message("planner-status","Clipboard unavailable on this device.")}});
   $("download-shopping").addEventListener("click",()=>download("family-recipes-shopping.csv","\ufeff"+csvShopping(),"text/csv;charset=utf-8"));
   $("new-trip").addEventListener("click",newTrip);$("cook-first").addEventListener("click",cookFirst);renderPlan();renderShopping();renderHistory()
  }
