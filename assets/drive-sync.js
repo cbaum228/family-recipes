@@ -167,9 +167,10 @@ async function chooseFile(){
   if(!hasToken())throw Error("Sign in first.");
   if(!config.apiKey||!config.projectNumber)throw Error("Save the Picker API key and Cloud project number first.");
   await ensurePicker();
-  const view=new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes("application/json");
+  const view=new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes("application/json").setMode(google.picker.DocsViewMode.LIST);
+  const shared=new google.picker.DocsView(google.picker.ViewId.DOCS).setOwnedByMe(false).setMimeTypes("application/json").setMode(google.picker.DocsViewMode.LIST);
   const picker=new google.picker.PickerBuilder().addView(view)
-    .addView(new google.picker.DocsView(google.picker.ViewId.SHARED_WITH_ME).setMimeTypes("application/json"))
+    .addView(shared)
     .setOAuthToken(token).setDeveloperKey(config.apiKey).setAppId(String(config.projectNumber))
     .setOrigin(location.origin)
     .setCallback(async data=>{
