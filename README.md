@@ -36,9 +36,11 @@ The repository is forkable. Friends use their own Github Pages domain and their 
 
 ## Shopping with AnyList
 
-From **Meal planner**, tap **Copy for AnyList**, then open the shared AnyList grocery list, tap its Add Item field, and use AnyList\'s bulk-paste control. The clipboard contains *only unstocked ingredients*, with one quantity-first line per item and no headings or checkboxes. AnyList categorizes the imported items and lets household members cross them off as usual. Check that AnyList interpreted the quantities correctly, and check for duplicates if pasting into a list that already has items. No direct API access or cross-app pantry updates are implied.
+The planner supports two exports. **Copy names for AnyList** produces one line per item in the form `Olive oil (25 g)`. Paste this into an existing shared grocery list via AnyList's Add Item → pasteboard option. AnyList bulk-list paste treats the full line as the item **name**, so the quantity remains visible as part of that name.
 
-AnyList instructions: https://help.anylist.com/articles/paste-items/
+**Copy as AnyList recipe ingredients** produces lines like `25 g Olive oil`. In AnyList, create a temporary recipe, paste these lines into the recipe **Ingredients** editor, save the recipe, then choose **Add all ingredients to list** and select your existing shared grocery list. Unlike list bulk paste, AnyList's recipe ingredient parser recognizes quantity information. Verify parsed results before shopping. Do not import both alternatives into the same list, or items may be duplicated.
+
+AnyList documentation: https://help.anylist.com/articles/paste-items/ and https://help.anylist.com/articles/recipe-copy-paste/ and https://help.anylist.com/articles/add-recipe-ingredients-to-list/.
 
 ## New shopping and cooking workflow
 
