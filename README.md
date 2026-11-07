@@ -28,6 +28,10 @@ See [Firebase Spark setup](docs/firebase-spark-setup.md). The old Google Drive a
 
 In GitHub repository **Settings → Pages**, choose **Deploy from a branch → main → /(root)**. Jekyll builds the Markdown cookbook into public HTML pages.
 
+## Add recipes with ChatGPT (family contributors)
+
+New contributors can send ChatGPT a recipe as text or a photo. Use the [one-paste recipe prompt](docs/chatgpt-recipe-prompt.md), [Markdown recipe template](docs/recipe-template.md) and [GitHub setup guide](CONTRIBUTING.md). A contributor needs their own GitHub collaborator invite; ChatGPT's standard GitHub app is read-only, so direct AI commits require a write-capable Codex/workflow, while browser copy-and-commit works without one.
+
 ## Add a recipe
 
 Copy one of the complete Markdown files in `_recipes/`. Ingredients need numeric `amount`, canonical `unit` (g or ml), `shopping_key`, `shopping_name`, and `aisle` for pantry matching and consolidated shopping lists. Mark recipes `ready-to-test` until you cook and review them.
