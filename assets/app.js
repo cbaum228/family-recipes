@@ -15,7 +15,7 @@ const usEquivalent=(quantity,unit)=>{
     else{value=n/28.349523125;label="oz"}
   }else if(unit==="ml"){value=n/29.5735295625;label="fl oz"}
   else return "";
-  return new Intl.NumberFormat("en-US",{maximumFractionDigits:1}).format(value)+" "+label;
+  return new Intl.NumberFormat("en-US",{maximumFractionDigits:value<1?2:1}).format(value)+" "+label;
 };
 const ID=()=>typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(36).slice(2);
 const validServings=n=>{const v=Number(n);return Number.isFinite(v)&&v>=.5&&v<=50?Math.round(v*2)/2:null};
@@ -124,8 +124,8 @@ function renderPlan(){
  for(const p of state.plan){
  const r=recipeById.get(p.recipeId);if(!r)continue;
  const line=el("div",null,"inventory-row"),content=el("div"),a=el("a",r.name);a.href=r.url;
- content.append(a,el("div",p.servings+" family servings"+(p.day?" · "+p.day:""),"muted"));
- const controls=el("div",null,"row-actions"),n=el("input");n.type="number";n.min=".5";n.max="50";n.step=".5";n.value=p.servings;n.setAttribute("aria-label","Family servings of "+r.name);
+ content.append(a,el("div",p.servings+" "+(r.yield_unit||"servings")+(p.day?" · "+p.day:""),"muted"));
+ const controls=el("div",null,"row-actions"),n=el("input");n.type="number";n.min=".5";n.max="50";n.step=".5";n.value=p.servings;n.setAttribute("aria-label",(r.yield_unit||"Servings")+" of "+r.name);
  n.addEventListener("change",()=>{const v=validServings(n.value);if(v===null){n.value=p.servings;return}p.servings=v;save();renderPlan();renderShopping()});
  const cook=el("button","Cook","light");cook.addEventListener("click",()=>editCooking(p.id));
  const rm=el("button","Remove","light");rm.addEventListener("click",()=>{state.plan=state.plan.filter(x=>x.id!==p.id);save();renderPlan();renderShopping()});
@@ -261,11 +261,11 @@ function cookFirst(){const p=state.plan[0];if(!p){message("planner-status","No p
 function initIndex(){const search=$("recipe-search"),cards=[...document.querySelectorAll(".recipe-card[data-search]")];if(!search)return;const filter=()=>{let shown=0;for(const c of cards){c.hidden=!c.dataset.search.includes(search.value.toLowerCase().trim());if(!c.hidden)shown++}const none=$("no-matches");if(none)none.hidden=shown!==0};search.addEventListener("input",filter)}
 function initRecipe(){
  const wrapper=$("recipe-controls");if(!wrapper)return;
- const id=wrapper.dataset.id,base=Number(wrapper.dataset.base),input=$("recipe-servings"),rows=[...document.querySelectorAll(".ingredient-row")];
+ const id=wrapper.dataset.id,base=Number(wrapper.dataset.base),unit=wrapper.dataset.yieldUnit||"servings",input=$("recipe-servings"),rows=[...document.querySelectorAll(".ingredient-row")];
  const scale=()=>{const servings=validServings(input.value)||base;for(const row of rows){const amount=Number(row.dataset.amount)*servings/base;row.querySelector(".scaled-amount").textContent=fmt(amount,row.dataset.unit);const secondary=row.querySelector(".us-equivalent");if(secondary)secondary.textContent="("+usEquivalent(amount,row.dataset.unit)+")"}};
  input.addEventListener("input",scale);
- $("add-recipe-plan").addEventListener("click",()=>{const servings=validServings(input.value);if(servings===null){message("recipe-feedback","Enter 0.5–50 family servings.");return}state.plan.push({id:ID(),recipeId:id,servings,day:""});save();message("recipe-feedback","Added to meal planner on this device.")});
- $("copy-recipe").addEventListener("click",async()=>{const servings=validServings(input.value)||base,lines=[document.querySelector("h1").textContent,servings+" family servings","Ingredients:",...rows.map(row=>fmt(Number(row.dataset.amount)*servings/base,row.dataset.unit)+" "+row.dataset.name),"Instructions:",...[...document.querySelectorAll(".panel ol li")].map((n,j)=>(j+1)+". "+n.textContent)];try{await copy(lines.join("\n"));message("recipe-feedback","Scaled recipe copied for MacroFactor AI import.")}catch(_){message("recipe-feedback","Clipboard unavailable on this device.")}});
+ $("add-recipe-plan").addEventListener("click",()=>{const servings=validServings(input.value);if(servings===null){message("recipe-feedback","Enter a valid recipe yield from 0.5 to 50.");return}state.plan.push({id:ID(),recipeId:id,servings,day:""});save();message("recipe-feedback","Added to meal planner on this device.")});
+ $("copy-recipe").addEventListener("click",async()=>{const servings=validServings(input.value)||base,lines=[document.querySelector("h1").textContent,servings+" "+unit,"Ingredients:",...rows.map(row=>fmt(Number(row.dataset.amount)*servings/base,row.dataset.unit)+" "+row.dataset.name),"Instructions:",...[...document.querySelectorAll(".panel ol li")].map((n,j)=>(j+1)+". "+n.textContent)];try{await copy(lines.join("\n"));message("recipe-feedback","Scaled recipe copied for MacroFactor AI import.")}catch(_){message("recipe-feedback","Clipboard unavailable on this device.")}});
  const link=$("copy-link");if(link)link.addEventListener("click",async()=>{try{await copy(location.href);link.textContent="Copied!"}catch(_){link.textContent="Copy from address bar"}});
  scale();
 }

@@ -5,25 +5,25 @@ layout: default
 <p><a href="{{ '/' | relative_url }}">← All recipes</a></p>
 <p class="eyebrow">{{ page.category | escape }} · {% if page.status == 'ready-to-test' and page.historically_cooked %}Historical cook / quantities to verify{% elsif page.status == 'ready-to-test' %}First test / unverified{% elsif page.status == 'tested' %}Tested{% else %}Archive — incomplete{% endif %}</p>
 <h1>{{ page.title | escape }}</h1><p>{{ page.description | escape }}</p>
-<p class="muted">Makes approximately {{ page.servings | default: 1 }} servings (full-size reference portions).</p></header>
+<p class="muted">{% if page.yield_unit %}Makes approximately {{ page.servings | default: 1 }} {{ page.yield_unit | escape }}{% else %}Makes approximately {{ page.servings | default: 1 }} servings (full-size reference portions){% endif %}{% if page.pan_size %} · {{ page.pan_size | escape }}{% endif %}.</p></header>
 {% if page.status == 'needs-reconstruction' %}
 <aside class="notice">Historical notes, not a complete recipe. Do not import into MacroFactor as a finalized recipe.</aside>
 {% else %}
 <aside class="notice">{% if page.historically_cooked %}Reconstructed from a previous cooking conversation. Historical quantities may include estimated metric conversions; verify against the current batch before importing into MacroFactor.{% else %}Proposed recipe, not yet cooked or nutrition-verified. Verify any estimated metric conversions and the finished batch yield before importing into MacroFactor.{% endif %}</aside>
-<section class="panel recipe-controls" id="recipe-controls" data-id="{{ page.slug | escape }}" data-base="{{ page.servings }}">
-<h2>Adjust recipe yield</h2><label>Servings <input type="number" id="recipe-servings" min=".5" max="50" step=".5" value="{{ page.servings }}"></label>
+<section class="panel recipe-controls" id="recipe-controls" data-id="{{ page.slug | escape }}" data-base="{{ page.servings }}" data-yield-unit="{{ page.yield_unit | default: 'servings' | escape }}">
+<h2>Adjust recipe yield</h2><label>{% if page.yield_unit %}{{ page.yield_unit | capitalize | escape }}{% else %}Servings{% endif %} <input type="number" id="recipe-servings" min=".5" max="50" step=".5" value="{{ page.servings }}"></label>
 <button id="add-recipe-plan">Add to meal plan</button><button id="copy-recipe">Copy scaled recipe for MacroFactor</button>
 <p id="recipe-feedback" class="muted" role="status"></p>
 </section>
 {% endif %}
-<section class="panel"><h2>Ingredients</h2><p class="muted">Metric amounts are exact recipe inputs; US measures in parentheses are approximate. Optional bread, rice and toppings are logged separately.</p>
+<section class="panel"><h2>Ingredients</h2><p class="muted">Metric quantities are used for recipe and pantry calculations. US equivalents in parentheses are approximate; see original measures and conversion notes below where available.</p>
 <div id="recipe-ingredients">
 {% for i in page.ingredients %}
 <div class="ingredient-row" data-name="{{ i.name | escape }}" data-amount="{{ i.amount }}" data-unit="{{ i.unit | escape }}">
   <span>{{ i.name | escape }}</span>
   <span class="ingredient-measure">
     <strong class="scaled-amount">{{ i.amount }} {{ i.unit }}</strong>
-    <span class="us-equivalent">({% if i.unit == 'g' %}{% if i.amount >= 453.59237 %}{{ i.amount | divided_by: 453.59237 | round: 1 }} lb{% else %}{{ i.amount | divided_by: 28.349523125 | round: 1 }} oz{% endif %}{% elsif i.unit == 'ml' %}{{ i.amount | divided_by: 29.5735295625 | round: 1 }} fl oz{% endif %})</span>
+    <span class="us-equivalent">({% if i.unit == 'g' %}{% if i.amount >= 453.59237 %}{{ i.amount | divided_by: 453.59237 | round: 1 }} lb{% else %}{% assign oz_amount = i.amount | divided_by: 28.349523125 %}{% if oz_amount < 1 %}{{ oz_amount | round: 2 }}{% else %}{{ oz_amount | round: 1 }}{% endif %} oz{% endif %}{% elsif i.unit == 'ml' %}{% assign floz_amount = i.amount | divided_by: 29.5735295625 %}{% if floz_amount < 1 %}{{ floz_amount | round: 2 }}{% else %}{{ floz_amount | round: 1 }}{% endif %} fl oz{% endif %})</span>
   </span>
 </div>
 {% endfor %}
@@ -49,7 +49,8 @@ layout: default
 "description":{{ page.description | jsonify }},
 "recipeCategory":{{ page.category | jsonify }},
 "recipeCuisine":{{ page.cuisine | jsonify }},
-"recipeYield":{{ page.servings | append: " servings" | jsonify }},
+{% assign display_yield_unit = page.yield_unit | default: "servings" %}
+"recipeYield":{{ page.servings | append: " " | append: display_yield_unit | jsonify }},
 "recipeIngredient":[{% for i in page.ingredients %}{% unless forloop.first %},{% endunless %}{{ i.amount | append: " " | append: i.unit | append: " " | append: i.name | jsonify }}{% endfor %}],
 "recipeInstructions":[{% for s in page.steps %}{% unless forloop.first %},{% endunless %}{"@type":"HowToStep","text":{{ s | jsonify }}}{% endfor %}]
 }

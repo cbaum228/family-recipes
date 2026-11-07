@@ -14,6 +14,7 @@ permalink: /assets/recipes.json
 "cuisine": {{ r.cuisine | jsonify }},
 "tags": {{ r.tags | jsonify }},
 "servings": {{ r.servings | plus: 0 }},
+"yield_unit": {{ r.yield_unit | default: "servings" | jsonify }},
 "nutrition_verified": {{ r.nutrition_verified | default: false | jsonify }},
 "ingredients": {{ r.ingredients | jsonify }}
 }{% endfor %}
